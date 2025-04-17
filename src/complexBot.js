@@ -80,7 +80,10 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      emitStep(eventEmitter, i, 'Filling login form...');
                      await page.locator(USERNAME_SELECTOR).fill(email);
                      await page.locator(PASSWORD_SELECTOR).fill(password);
-                     const apiResponsePromise = page.waitForResponse(/* ... */);
+                     const apiResponsePromise = page.waitForResponse(
+                             response => response.url().includes(LOGIN_API_ENDPOINT_PATH) && response.request().method() === 'POST',
+                             { timeout: 15000 }
+                         );
                      emitStep(eventEmitter, i, 'Clicking submit...');
                      await page.locator(SUBMIT_BUTTON_SELECTOR).click();
                      emitStep(eventEmitter, i, `Waiting for API response (${LOGIN_API_ENDPOINT_PATH})...`);
