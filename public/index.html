@@ -9,16 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      // Optional: Configure Tailwind
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            },
-          }
-        }
-      }
+      tailwind.config = { /* ... */ }
     </script>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -43,7 +34,8 @@
                 </div>
                 <div>
                     <label for="numRequests" class="block text-sm font-medium text-gray-700">Number of Requests</label>
-                    <input type="number" id="numRequests" name="numRequests" value="5" min="1" max="50" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <input type="number" id="numRequests" name="numRequests" value="5" min="1" max="1000" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                 </div>
                 <div>
                     <label for="botType" class="block text-sm font-medium text-gray-700">Bot Type</label>
@@ -51,22 +43,24 @@
                             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
                         <option value="Simple">Simple (Sequential HTTP)</option>
                         <option value="Medium">Medium (Realistic Headers)</option>
-                         <option value="Complex">Complex (Browser Emulation)</option>
+                        <option value="Complex">Complex (Browser Emulation)</option>
                     </select>
                 </div>
                 <div id="cookie-field-container" class="hidden">
-                    <label for="cookieString" class="block text-sm font-medium text-gray-700">
-                        Optional Cookie String (for Medium Bots)
-                    </label>
-                    <textarea id="cookieString" name="cookieString" rows="3"
-                           placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..."
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                     <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
+                     <textarea id="cookieString" name="cookieString" rows="3" placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
                      <p class="mt-1 text-xs text-gray-500">Paste the full cookie string here if you want the Medium bot to replay it.</p>
                 </div>
-                <button type="submit" id="launch-button"
-                        class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Launch Attack
-                </button>
+                <div class="flex space-x-4">
+                     <button type="submit" id="launch-button"
+                             class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                         Launch Attack
+                     </button>
+                     <button type="button" id="stop-button"
+                             class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                         Stop Attack
+                     </button>
+                </div>
             </form>
         </div>
 
@@ -81,35 +75,7 @@
 
     </div>
     <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
-        <div class="relative mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
-            <div class="flex justify-between items-center pb-3 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900" id="modal-title">Request Details</h3>
-                <button id="modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-                </button>
-            </div>
-            <div class="mt-3 text-sm space-y-4">
-                <div>
-                    <h4 class="font-semibold text-gray-700 mb-1">Request (Final API Call)</h4>
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200 max-h-60 overflow-y-auto">
-                        <p><strong class="font-medium">URL:</strong> <span id="modal-req-url"></span></p>
-                        <p><strong class="font-medium">Method:</strong> <span id="modal-req-method"></span></p>
-                        <div><strong class="font-medium">Headers:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-req-headers"></pre></div>
-                        <div><strong class="font-medium">Body:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-req-body"></pre></div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-semibold text-gray-700 mb-1">Response (Final API Call)</h4>
-                     <div class="bg-gray-50 p-3 rounded border border-gray-200 max-h-60 overflow-y-auto">
-                        <p><strong class="font-medium">Status:</strong> <span id="modal-res-status"></span></p>
-                        <div><strong class="font-medium">Headers:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-headers"></pre></div>
-                        <div><strong class="font-medium">Body Snippet:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-body"></pre></div>
-                         <p id="modal-res-error" class="text-red-600 mt-1"></p>
-                    </div>
-                </div>
-            </div>
         </div>
-    </div>
 
     <script src="script.js"></script>
 </body>
