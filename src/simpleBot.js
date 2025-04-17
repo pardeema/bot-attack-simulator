@@ -2,7 +2,13 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-function generateRandomPassword() { /* ... */ }
+/**
+ * Generates a random password string.
+ * @returns {string} A random hexadecimal string.
+ */
+function generateRandomPassword() {
+    return crypto.randomBytes(8).toString('hex');
+}
 
 /**
  * Runs simple bot requests sequentially, checking for stop signal.
@@ -16,7 +22,7 @@ function generateRandomPassword() { /* ... */ }
  */
 async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, shouldStop }) { // Added shouldStop
     return new Promise(async (resolve) => {
-        const fullUrl = /* ... */ ;
+        const fullUrl = targetUrl.endsWith('/') ? targetUrl.slice(0, -1) + endpoint : targetUrl + endpoint;
         const knownPassword = "K4sad@!";
         const isLogin = endpoint.includes('login');
         const knownPasswordRequestIndex = isLogin ? (Math.floor(Math.random() * numRequests) + 1) : -1;
@@ -33,32 +39,51 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
 
             const startTime = Date.now();
             let requestBody = {};
-            // ... (determine request body based on endpoint) ...
-             if (isLogin) { const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword(); requestBody = { email: "user@example.com", password: password }; }
-             else if (endpoint.includes('checkout')) { requestBody = { /* Static checkout payload */ }; }
-             else { requestBody = {}; }
+            // Determine request body based on endpoint
+             if (isLogin) {
+                 const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
+                 requestBody = { email: "user@example.com", password: password };
+             } else if (endpoint.includes('checkout')) {
+                 requestBody = { // Static checkout payload
+                    items: [{ id: (i % 5) + 1, name: `Dummy Item ${i % 5 + 1}`, price: (Math.random() * 50 + 10).toFixed(2), quantity: 1 }],
+                    shippingAddress: { name: `Test Bot ${i}`, email: `bot${i}@example.com`, address: `${i} Bot St`, city: "Botville", state: "BT", zipCode: "12345", country: "Botland" },
+                    paymentMethod: (i % 2 === 0) ? "credit-card" : "paypal"
+                 };
+             } else {
+                 requestBody = {};
+             }
 
-            const requestHeaders = { /* ... */ };
+            const requestHeaders = { // Define headers
+                'User-Agent': `BotSim/1.0 (Req ${i})`,
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            };
             let status = null, statusText = '', error = null, responseDataSnippet = null, responseHeaders = null;
 
             try {
                 console.log(`[SimpleBot] Sending request ${i}...`);
-                const response = await axios.post(fullUrl, requestBody, { /* ... config ... */ });
-                // ... (process response) ...
+                const response = await axios.post(fullUrl, requestBody, {
+                     timeout: 10000,
+                     headers: requestHeaders,
+                     validateStatus: function (status) { return true; }
+                 });
+                 // Process response
                  status = response.status; statusText = response.statusText; responseHeaders = response.headers;
                  if (response.data) responseDataSnippet = (typeof response.data === 'object' ? JSON.stringify(response.data) : String(response.data)).substring(0, 100);
                  console.log(`[SimpleBot] Request ${i} completed: Status ${status}`);
             } catch (err) {
-                // ... (handle error) ...
+                // Handle error
                  console.error(`[SimpleBot] Request ${i} failed: ${err.message}`); error = err.message; responseHeaders = err.response?.headers || null;
                  if (err.response) { status = err.response.status; statusText = err.response.statusText; } else { status = 'Error'; statusText = err.code || 'Network Error'; }
             }
 
-            const resultData = { /* ... populate resultData ... */
+            // Prepare result data
+            const resultData = {
                  id: i, url: fullUrl, method: 'POST', status: status, statusText: statusText,
                  timestamp: startTime, requestBody: requestBody, requestHeaders: requestHeaders,
                  responseHeaders: responseHeaders, responseDataSnippet: responseDataSnippet, error: error,
             };
+            // Emit result
             eventEmitter.emit('result', resultData);
 
         } // End of for loop

@@ -1,7 +1,7 @@
 // server.js
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+const path = require('path'); // Corrected import
 const EventEmitter = require('events');
 const { runSimpleBots } = require('./src/simpleBot');
 const { runMediumBots } = require('./src/mediumBot');
@@ -53,7 +53,7 @@ app.post('/launch-attack', (req, res) => {
     else if (botType === 'Medium') botRunnerPromise = runMediumBots(botConfig);
     else if (botType === 'Complex') botRunnerPromise = runComplexBots(botConfig);
     else {
-        console.warn(`[Server] Bot type "${botType}" not implemented.`);
+        console.warn(`[Server] Bot type "${botType}" not implemented yet.`);
         return res.status(400).json({ message: `Bot type "${botType}" not implemented yet.` });
     }
 
@@ -86,19 +86,19 @@ app.get('/attack-stream', (req, res) => { /* ... SSE handling logic (same as bef
     res.flushHeaders();
 
     const resultListener = (resultData) => { res.write(`event: result\ndata: ${JSON.stringify(resultData)}\n\n`); };
-    const stepListener = (stepData) => { res.write(`event: step\ndata: ${JSON.stringify(stepData)}\n\n`); };
+    const stepListener = (stepData) => { res.write(`event: step\ndata: ${JSON.stringify(stepData)}\n\n`); }; // Handle step event
     const doneListener = () => { res.write(`event: done\ndata: ${JSON.stringify({ message: "Stream finished" })}\n\n`); cleanup(); };
     const errorListener = (errorData) => { res.write(`event: error\ndata: ${JSON.stringify(errorData)}\n\n`); };
 
     attackEmitter.on('result', resultListener);
-    attackEmitter.on('step', stepListener);
+    attackEmitter.on('step', stepListener); // Attach step listener
     attackEmitter.on('done', doneListener);
     attackEmitter.on('error', errorListener);
 
     const cleanup = () => {
         console.log('[Server] SSE client cleaning up listeners.');
         attackEmitter.off('result', resultListener);
-        attackEmitter.off('step', stepListener);
+        attackEmitter.off('step', stepListener); // Detach step listener
         attackEmitter.off('done', doneListener);
         attackEmitter.off('error', errorListener);
         if (!res.writableEnded) { res.end(); console.log('[Server] SSE connection closed.'); }
