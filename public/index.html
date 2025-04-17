@@ -64,7 +64,6 @@
                              class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                          Launch Attack
                      </button>
-                     {/* */}
                      <button type="button" id="stop-button"
                              class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hidden disabled:opacity-50 disabled:cursor-not-allowed">
                          Stop Attack
@@ -73,19 +72,16 @@
             </form>
         </div>
 
-        {/* */}
         <div class="bg-white p-6 rounded-lg shadow-md">
              <h2 class="text-xl font-semibold text-gray-700 mb-4">Results (Click Row for Details)</h2>
             <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
             </div>
             <div id="results-list" class="overflow-x-auto">
                  <p class="text-gray-500">Results will appear here after launching an attack.</p>
-            </div>
+                 </div>
         </div>
 
-    </div>
-    {/* */}
-    <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
+    </div> <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
        <div class="relative mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b border-gray-200">
                 <h3 class="text-lg font-medium text-gray-900" id="modal-title">Request Details</h3>
@@ -109,8 +105,7 @@
                         <p><strong class="font-medium">Status:</strong> <span id="modal-res-status"></span></p>
                         <div><strong class="font-medium">Headers:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-headers"></pre></div>
                         <div><strong class="font-medium">Body Snippet:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-body"></pre></div>
-                         <p id="modal-res-error" class="text-red-600 mt-1"></p>
-                    </div>
+                         <p id="modal-res-error" class="text-red-600 mt-1 hidden"></p> </div>
                 </div>
             </div>
         </div>

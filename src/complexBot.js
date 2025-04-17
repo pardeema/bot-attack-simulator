@@ -115,7 +115,10 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      await page.locator(CHECKOUT_FORM_SELECTORS.city).fill('BotCity');
                      await page.locator(CHECKOUT_FORM_SELECTORS.state).fill('BT');
                      await page.locator(CHECKOUT_FORM_SELECTORS.zipCode).fill('98765');
-                     const apiResponsePromise = page.waitForResponse(/* ... */);
+                     const apiResponsePromise = page.waitForResponse(
+                             response => response.url().includes(CHECKOUT_API_ENDPOINT_PATH) && response.request().method() === 'POST',
+                             { timeout: 20000 }
+                         );
                      emitStep(eventEmitter, i, `Clicking final submit '${FINAL_SUBMIT_SELECTOR}'...`);
                      await page.locator(FINAL_SUBMIT_SELECTOR).click();
                      emitStep(eventEmitter, i, `Waiting for API response (${CHECKOUT_API_ENDPOINT_PATH})...`);
