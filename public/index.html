@@ -20,68 +20,72 @@
       }
     </script>
 </head>
-<body class="bg-gray-100 font-sans">
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Bot Attack Simulator</h1>
+<body class="bg-gray-100 font-sans overflow-hidden h-screen flex flex-col">
 
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Configuration</h2>
-            <form id="attack-form" class="space-y-4">
-                <div>
-                    <label for="targetUrl" class="block text-sm font-medium text-gray-700">Target URL</label>
-                    <input type="text" id="targetUrl" name="targetUrl" value="http://shop.botdemo.net" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
-                <div>
-                    <label for="endpoint" class="block text-sm font-medium text-gray-700">Target Workflow</label>
-                    <select id="endpoint" name="endpoint" required
-                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
-                        <option value="/api/auth/login">Login (/api/auth/login)</option>
-                        <option value="/api/checkout">Checkout (/api/checkout)</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="numRequests" class="block text-sm font-medium text-gray-700">Number of Requests</label>
-                    <input type="number" id="numRequests" name="numRequests" value="5" min="1" max="1000" required
-                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                </div>
-                <div>
-                    <label for="botType" class="block text-sm font-medium text-gray-700">Bot Type</label>
-                    <select id="botType" name="botType" required
-                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
-                        <option value="Simple">Simple (Sequential HTTP)</option>
-                        <option value="Medium">Medium (Realistic Headers)</option>
-                        <option value="Complex">Complex (Browser Emulation)</option>
-                    </select>
-                </div>
-                <div id="cookie-field-container" class="hidden">
-                     <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
-                     <textarea id="cookieString" name="cookieString" rows="3" placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-                     <p class="mt-1 text-xs text-gray-500">Paste the full cookie string here if you want the Medium bot to replay it.</p>
-                </div>
-                <div class="flex space-x-4">
-                     <button type="submit" id="launch-button"
-                             class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                         Launch Attack
-                     </button>
-                     <button type="button" id="stop-button"
-                             class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hidden disabled:opacity-50 disabled:cursor-not-allowed">
-                         Stop Attack
-                     </button>
-                </div>
-            </form>
-        </div>
+    <header class="sticky top-0 z-10 bg-gray-100 shadow pb-4">
+        <div class="container mx-auto px-4 md:px-8 pt-4 md:pt-8 max-w-4xl">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Bot Attack Simulator</h1>
 
-        <div class="bg-white p-6 rounded-lg shadow-md">
-             <h2 class="text-xl font-semibold text-gray-700 mb-4">Results (Click Row for Details)</h2>
-            <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Configuration</h2>
+                <form id="attack-form" class="space-y-4">
+                    <div>
+                        <label for="targetUrl" class="block text-sm font-medium text-gray-700">Target URL</label>
+                        <input type="text" id="targetUrl" name="targetUrl" value="http://shop.botdemo.net" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="endpoint" class="block text-sm font-medium text-gray-700">Target Workflow</label>
+                        <select id="endpoint" name="endpoint" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
+                            <option value="/api/auth/login">Login (/api/auth/login)</option>
+                            <option value="/api/checkout">Checkout (/api/checkout)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="numRequests" class="block text-sm font-medium text-gray-700">Number of Requests</label>
+                        <input type="number" id="numRequests" name="numRequests" value="5" min="1" max="1000" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="botType" class="block text-sm font-medium text-gray-700">Bot Type</label>
+                        <select id="botType" name="botType" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
+                            <option value="Simple">Simple (Sequential HTTP)</option>
+                            <option value="Medium">Medium (Realistic Headers)</option>
+                            <option value="Complex">Complex (Browser Emulation)</option>
+                        </select>
+                    </div>
+                    <div id="cookie-field-container" class="hidden">
+                         <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
+                         <textarea id="cookieString" name="cookieString" rows="3" placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                         <p class="mt-1 text-xs text-gray-500">Paste the full cookie string here if you want the Medium bot to replay it.</p>
+                    </div>
+                    <div class="flex space-x-4">
+                         <button type="submit" id="launch-button"
+                                 class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                             Launch Attack
+                         </button>
+                         <button type="button" id="stop-button"
+                                 class="flex-1 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 hidden disabled:opacity-50 disabled:cursor-not-allowed">
+                             Stop Attack
+                         </button>
+                    </div>
+                </form>
             </div>
-            <div id="results-list" class="overflow-x-auto">
-                 <p class="text-gray-500">Results will appear here after launching an attack.</p>
-                 </div>
         </div>
+    </header>
 
-    </div> <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
+    <main class="flex-1 overflow-y-auto pb-8">
+        <div class="container mx-auto px-4 md:px-8 max-w-4xl">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Results (Click Row for Details)</h2>
+                <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
+                </div>
+                <div id="results-list" class="overflow-x-auto">
+                     <p class="text-gray-500">Results will appear here after launching an attack.</p>
+                     </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
        <div class="relative mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b border-gray-200">
                 <h3 class="text-lg font-medium text-gray-900" id="modal-title">Request Details</h3>

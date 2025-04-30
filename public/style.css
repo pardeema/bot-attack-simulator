@@ -1,33 +1,80 @@
 /* public/style.css */
 
-/* Add any custom styles here if needed. */
-/* Tailwind is handling most styling via CDN in the HTML. */
-
-/* Example: Style for status codes */
-.status-success {
-    color: #16a34a; /* Green */
-    font-weight: 500;
-}
-.status-redirect {
-    color: #ea580c; /* Orange */
-    font-weight: 500;
-}
-.status-client-error {
-    color: #dc2626; /* Red */
-    font-weight: 500;
-}
-.status-server-error {
-    color: #b91c1c; /* Darker Red */
-    font-weight: 500;
-}
-.status-other {
-    color: #52525b; /* Zinc */
-    font-weight: 500;
+/* Apply sticky header and scrolling content layout */
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ensure body takes full viewport height */
+    overflow: hidden; /* Prevent body scrollbars */
 }
 
-/* Style for clickable rows (for future detail view) */
-.result-row:hover {
-    background-color: #f3f4f6; /* Cool Gray 100 */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* Keep header above scrolling content */
+    background-color: #f3f4f6; /* bg-gray-100 */
+    /* Add padding/shadow if needed */
+    padding-bottom: 1rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+main {
+    flex: 1 1 auto; /* Allow main to grow and shrink */
+    overflow-y: auto; /* Enable vertical scrolling ONLY for main */
+    padding-bottom: 2rem; /* Add some space at the bottom */
+}
+
+
+/* --- Row Styles --- */
+.result-row {}
+
+.step-row {
+    font-style: italic;
+    font-size: 0.875rem; /* text-sm */
+    color: #4b5563; /* gray-600 */
+}
+.step-row:hover {
+    background-color: #f9fafb; /* gray-50 */
+    cursor: default;
+}
+.step-row td {
+    font-weight: normal;
+    color: inherit;
+}
+
+.final-row {
+    font-weight: 500; /* Medium weight */
+}
+.final-row:hover {
+    background-color: #f3f4f6; /* gray-100 */
+}
+
+.toggle-cell {
     cursor: pointer;
 }
+.toggle-cell:hover {
+     color: #4f46e5; /* Indigo */
+}
+
+.chevron {
+    display: inline-block;
+    width: 0.5em;
+    height: 0.5em;
+    border-right: 0.15em solid currentColor;
+    border-top: 0.15em solid currentColor;
+    transform: rotate(135deg); /* Down */
+    transition: transform 0.2s ease-in-out;
+    margin-left: 0.4em;
+    vertical-align: middle;
+}
+.chevron.collapsed {
+    transform: rotate(-45deg); /* Right */
+}
+
+/* Status code colors */
+.status-success { color: #16a34a; font-weight: 500; }
+.status-redirect { color: #ea580c; font-weight: 500; }
+.status-client-error { color: #dc2626; font-weight: 500; }
+.status-server-error { color: #b91c1c; font-weight: 500; }
+.status-other { color: #52525b; font-weight: 500; }
 
