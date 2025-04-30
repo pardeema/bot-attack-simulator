@@ -4,7 +4,6 @@ const crypto = require('crypto');
 
 /**
  * Generates a random password string.
- * @returns {string} A random hexadecimal string.
  */
 function generateRandomPassword() {
     return crypto.randomBytes(8).toString('hex');
@@ -12,6 +11,7 @@ function generateRandomPassword() {
 
 /**
  * Runs simple bot requests sequentially, checking for stop signal.
+ * Obfuscates the known password in the result data sent to the frontend.
  * @param {object} config
  * @param {string} config.targetUrl
  * @param {string} config.endpoint
@@ -20,7 +20,7 @@ function generateRandomPassword() {
  * @param {function} config.shouldStop - Function that returns true if stop is requested.
  * @returns {Promise<void>}
  */
-async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, shouldStop }) { // Added shouldStop
+async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, shouldStop }) {
     return new Promise(async (resolve) => {
         const fullUrl = targetUrl.endsWith('/') ? targetUrl.slice(0, -1) + endpoint : targetUrl + endpoint;
         const knownPassword = "K4sad@!";
@@ -31,20 +31,21 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
         if (isLogin) console.log(`[SimpleBot] Request #${knownPasswordRequestIndex} will use the known password.`);
 
         for (let i = 1; i <= numRequests; i++) {
-            // *** ADDED: Check if stop was requested before starting iteration ***
             if (shouldStop()) {
                 console.log(`[SimpleBot] Stop requested at iteration ${i}. Exiting loop.`);
-                break; // Exit the loop
+                break;
             }
 
             const startTime = Date.now();
             let requestBody = {};
+            let passwordUsed = null; // Store the actual password used for the request
+
             // Determine request body based on endpoint
              if (isLogin) {
-                 const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
-                 requestBody = { email: "user@example.com", password: password };
+                 passwordUsed = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
+                 requestBody = { email: "user@example.com", password: passwordUsed };
              } else if (endpoint.includes('checkout')) {
-                 requestBody = { // Static checkout payload
+                 requestBody = { /* Static checkout payload */
                     items: [{ id: (i % 5) + 1, name: `Dummy Item ${i % 5 + 1}`, price: (Math.random() * 50 + 10).toFixed(2), quantity: 1 }],
                     shippingAddress: { name: `Test Bot ${i}`, email: `bot${i}@example.com`, address: `${i} Bot St`, city: "Botville", state: "BT", zipCode: "12345", country: "Botland" },
                     paymentMethod: (i % 2 === 0) ? "credit-card" : "paypal"
@@ -53,19 +54,15 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
                  requestBody = {};
              }
 
-            const requestHeaders = { // Define headers
-                'User-Agent': `BotSim/1.0 (Req ${i})`,
-                'Accept': 'application/json, text/plain, */*',
-                'Content-Type': 'application/json'
+            const requestHeaders = { /* Define headers */
+                'User-Agent': `BotSim/1.0 (Req ${i})`, 'Accept': 'application/json, text/plain, */*', 'Content-Type': 'application/json'
             };
             let status = null, statusText = '', error = null, responseDataSnippet = null, responseHeaders = null;
 
             try {
                 console.log(`[SimpleBot] Sending request ${i}...`);
-                const response = await axios.post(fullUrl, requestBody, {
-                     timeout: 10000,
-                     headers: requestHeaders,
-                     validateStatus: function (status) { return true; }
+                const response = await axios.post(fullUrl, requestBody, { /* axios config */
+                     timeout: 10000, headers: requestHeaders, validateStatus: function (status) { return true; }
                  });
                  // Process response
                  status = response.status; statusText = response.statusText; responseHeaders = response.headers;
@@ -77,10 +74,21 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
                  if (err.response) { status = err.response.status; statusText = err.response.statusText; } else { status = 'Error'; statusText = err.code || 'Network Error'; }
             }
 
-            // Prepare result data
+            // *** OBFUSCATION LOGIC ***
+            // Create a copy of the request body to potentially modify for logging/UI display
+            let displayRequestBody = { ...requestBody };
+            // If this was a login request using the known password, obfuscate it
+            if (isLogin && passwordUsed === knownPassword) {
+                 displayRequestBody.password = '********'; // Obfuscate
+            }
+            // *** END OBFUSCATION LOGIC ***
+
+            // Prepare result data using the potentially obfuscated body
             const resultData = {
                  id: i, url: fullUrl, method: 'POST', status: status, statusText: statusText,
-                 timestamp: startTime, requestBody: requestBody, requestHeaders: requestHeaders,
+                 timestamp: startTime,
+                 requestBody: displayRequestBody, // Use the display version
+                 requestHeaders: requestHeaders,
                  responseHeaders: responseHeaders, responseDataSnippet: responseDataSnippet, error: error,
             };
             // Emit result
@@ -89,7 +97,7 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
         } // End of for loop
 
         console.log(`[SimpleBot] Loop finished or stopped.`);
-        eventEmitter.emit('done'); // Emit done regardless of whether loop finished or broke
+        eventEmitter.emit('done');
         resolve();
     });
 }

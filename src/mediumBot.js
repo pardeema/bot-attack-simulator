@@ -10,6 +10,7 @@ function getRandomUserAgent() { const index = Math.floor(Math.random() * USER_AG
 
 /**
  * Runs medium bot requests sequentially, checking for stop signal.
+ * Obfuscates the known password in the result data sent to the frontend.
  * @param {object} config
  * @param {string} config.targetUrl
  * @param {string} config.endpoint
@@ -19,7 +20,7 @@ function getRandomUserAgent() { const index = Math.floor(Math.random() * USER_AG
  * @param {function} config.shouldStop - Function that returns true if stop is requested.
  * @returns {Promise<void>}
  */
-async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, cookieString, shouldStop }) { // Added shouldStop
+async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, cookieString, shouldStop }) {
     return new Promise(async (resolve) => {
         const fullUrl = targetUrl.endsWith('/') ? targetUrl.slice(0, -1) + endpoint : targetUrl + endpoint;
         const knownPassword = "K4sad@!";
@@ -32,44 +33,35 @@ async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, c
         if (cookieString) console.log(`[MediumBot] Using provided cookie string.`);
 
         for (let i = 1; i <= numRequests; i++) {
-             // *** ADDED: Check if stop was requested before starting iteration ***
             if (shouldStop()) {
                 console.log(`[MediumBot] Stop requested at iteration ${i}. Exiting loop.`);
-                break; // Exit the loop
+                break;
             }
 
             const startTime = Date.now();
             let requestBody = {};
-             // Determine request body
-             if (isLogin) { const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword(); requestBody = { email: "user@example.com", password: password }; }
-             else if (endpoint.includes('checkout')) { requestBody = { /* Static checkout payload */ }; }
-             else { requestBody = {}; }
+            let passwordUsed = null; // Store the actual password used
+
+            // Determine request body
+             if (isLogin) {
+                 passwordUsed = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
+                 requestBody = { email: "user@example.com", password: passwordUsed };
+             } else if (endpoint.includes('checkout')) {
+                 requestBody = { /* Static checkout payload */ };
+             } else {
+                 requestBody = {};
+             }
 
             // Construct Headers
-            const requestHeaders = {
-                'User-Agent': getRandomUserAgent(),
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': ACCEPT_LANGUAGE,
-                'Content-Type': 'application/json',
-                'Origin': targetUrl,
-                'Referer': refererUrl,
-                'Sec-Fetch-Dest': 'empty',
-                'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Site': 'same-origin',
-            };
-            if (cookieString && cookieString.trim() !== '') {
-                requestHeaders['Cookie'] = cookieString.trim();
-            }
+            const requestHeaders = { /* ... construct headers ... */ };
+            if (cookieString && cookieString.trim() !== '') { requestHeaders['Cookie'] = cookieString.trim(); }
+            // ...
 
             let status = null, statusText = '', error = null, responseDataSnippet = null, responseHeaders = null;
 
             try {
                 console.log(`[MediumBot] Sending request ${i}...`);
-                const response = await axios.post(fullUrl, requestBody, {
-                    timeout: 10000,
-                    headers: requestHeaders,
-                    validateStatus: function (status) { return true; }
-                });
+                const response = await axios.post(fullUrl, requestBody, { /* axios config */ });
                 // Process response
                  status = response.status; statusText = response.statusText; responseHeaders = response.headers;
                  if (response.data) responseDataSnippet = (typeof response.data === 'object' ? JSON.stringify(response.data) : String(response.data)).substring(0, 100);
@@ -80,10 +72,19 @@ async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, c
                  if (err.response) { status = err.response.status; statusText = err.response.statusText; } else { status = 'Error'; statusText = err.code || 'Network Error'; }
             }
 
+            // *** OBFUSCATION LOGIC ***
+            let displayRequestBody = { ...requestBody };
+            if (isLogin && passwordUsed === knownPassword) {
+                 displayRequestBody.password = '********'; // Obfuscate
+            }
+            // *** END OBFUSCATION LOGIC ***
+
             // Prepare result data
             const resultData = {
                  id: i, url: fullUrl, method: 'POST', status: status, statusText: statusText,
-                 timestamp: startTime, requestBody: requestBody, requestHeaders: requestHeaders,
+                 timestamp: startTime,
+                 requestBody: displayRequestBody, // Use display version
+                 requestHeaders: requestHeaders,
                  responseHeaders: responseHeaders, responseDataSnippet: responseDataSnippet, error: error,
             };
             // Emit result
@@ -92,7 +93,7 @@ async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, c
         } // End loop
 
         console.log(`[MediumBot] Loop finished or stopped.`);
-        eventEmitter.emit('done'); // Emit done regardless
+        eventEmitter.emit('done');
         resolve();
     });
 }

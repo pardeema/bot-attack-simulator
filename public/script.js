@@ -667,4 +667,3 @@ function hideStatus() {
     statusMessage.textContent = '';
     statusMessage.classList.add('hidden');
 }
-

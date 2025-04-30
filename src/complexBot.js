@@ -90,10 +90,35 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      const apiResponse = await apiResponsePromise;
                      emitStep(eventEmitter, i, 'Processing API response...');
                      // ... process apiResponse into resultData ...
-                     resultData.status = apiResponse.status(); resultData.statusText = apiResponse.statusText(); resultData.responseHeaders = apiResponse.headers();
-                     const bodyBuffer = await apiResponse.body(); resultData.responseDataSnippet = bodyBuffer.toString('utf-8').substring(0, 150);
-                     const apiRequest = apiResponse.request(); resultData.requestHeaders = apiRequest.headers();
-                     try { resultData.requestBody = apiRequest.postDataJSON(); } catch { resultData.requestBody = apiRequest.postData(); }
+                    resultData.status = apiResponse.status();
+                    resultData.statusText = apiResponse.statusText();
+                    resultData.responseHeaders = apiResponse.headers();
+                    const bodyBuffer = await apiResponse.body();
+                    resultData.responseDataSnippet = bodyBuffer.toString('utf-8').substring(0, 150);
+                    const apiRequest = apiResponse.request();
+                    resultData.requestHeaders = apiRequest.headers();
+                    try {
+                        resultData.requestBody = apiRequest.postDataJSON();
+                    } catch {
+                        resultData.requestBody = apiRequest.postData(); // Might be plain text or other format
+                    }
+
+                    // *** START OBFUSCATION LOGIC ***
+                    // Check if this was the login request using the known password
+                    if (isLogin && i === knownPasswordRequestIndex) {
+                        // Make a deep copy if requestBody is an object, otherwise handle appropriately
+                        if (resultData.requestBody && typeof resultData.requestBody === 'object') {
+                           let displayRequestBody = JSON.parse(JSON.stringify(resultData.requestBody)); // Deep copy
+                           if (displayRequestBody.password) { // Check if password field exists
+                               displayRequestBody.password = '********'; // Obfuscate
+                           }
+                           resultData.requestBody = displayRequestBody; // Assign the modified copy back
+                        }
+                        // Optional: Handle cases where requestBody might be a string
+                        // else if (typeof resultData.requestBody === 'string') {
+                        //    // Implement string replacement if necessary, though postDataJSON should handle JSON
+                        // }
+                    }
 
                 // === CHECKOUT WORKFLOW ===
                 } else if (isCheckout) {
