@@ -19,6 +19,10 @@ const modalResBody = document.getElementById('modal-res-body');
 const modalResError = document.getElementById('modal-res-error');
 const botTypeSelect = document.getElementById('botType');
 const cookieFieldContainer = document.getElementById('cookie-field-container');
+// Config Toggle References
+const configToggleButton = document.getElementById('config-toggle-button');
+const configContainer = document.getElementById('config-container');
+const mainHeader = document.getElementById('main-header'); // Target header for padding adjustment
 
 // --- State Variables ---
 let resultsTableBody = null; // To store reference to tbody
@@ -33,12 +37,65 @@ stopButton.addEventListener('click', handleStopClick);
 modalCloseButton.addEventListener('click', hideModal);
 detailModal.addEventListener('click', (event) => { if (event.target === detailModal) hideModal(); });
 botTypeSelect.addEventListener('change', toggleCookieField);
+configToggleButton.addEventListener('click', handleConfigToggle); // Listener for config toggle
 
 // --- Initial Setup ---
 toggleCookieField(); // Call once on load to set initial visibility
 
 
 // --- Functions ---
+
+/**
+ * Collapses the configuration area visually.
+ */
+function collapseConfigArea() {
+    const icon = configToggleButton.querySelector('svg');
+    if (!configContainer.classList.contains('collapsed')) {
+        // Set max-height to current height first for transition starting point
+        configContainer.style.maxHeight = configContainer.scrollHeight + "px";
+        // Force reflow/repaint before applying the collapsed class and max-height 0
+        requestAnimationFrame(() => {
+            configContainer.classList.add('collapsed');
+            configContainer.style.maxHeight = '0px'; // Animate to 0 height
+            mainHeader.style.paddingBottom = '0'; // Remove header padding when collapsed
+            icon?.classList.add('collapsed');
+        });
+    }
+}
+
+/**
+ * Expands the configuration area visually.
+ */
+function expandConfigArea() {
+    const icon = configToggleButton.querySelector('svg');
+     if (configContainer.classList.contains('collapsed')) {
+        configContainer.classList.remove('collapsed');
+        // Set max-height to scroll height to animate expansion
+        configContainer.style.maxHeight = configContainer.scrollHeight + "px";
+        mainHeader.style.paddingBottom = '1rem'; // Restore header padding
+        icon?.classList.remove('collapsed');
+        // Clear max-height after transition to allow dynamic resizing
+        setTimeout(() => {
+             if (!configContainer.classList.contains('collapsed')) {
+                 configContainer.style.maxHeight = null;
+             }
+        }, 300); // Match CSS transition duration (adjust if CSS changes)
+     }
+}
+
+
+/**
+ * Handles click on the configuration toggle button.
+ */
+function handleConfigToggle() {
+    const isCollapsed = configContainer.classList.contains('collapsed');
+    if (isCollapsed) {
+        expandConfigArea();
+    } else {
+        collapseConfigArea();
+    }
+}
+
 
 /**
  * Shows or hides the optional cookie field based on selected Bot Type.
@@ -69,6 +126,10 @@ async function handleFormSubmit(event) {
      stopButton.textContent = 'Stop Attack'; // Ensure text is correct
      // ---
 
+     // *** ADDED: Auto-collapse config area ***
+     collapseConfigArea();
+     // ---
+
      showStatus('Initiating attack simulation...', 'info');
      clearResultsTable(); // Clear and setup table
 
@@ -81,8 +142,6 @@ async function handleFormSubmit(event) {
          botType: formData.get('botType'),
          cookieString: formData.get('cookieString') || ''
      };
-
-     // --- REMOVED: Pre-population of rows ---
 
      try {
          const launchResponse = await fetch('/launch-attack', {
@@ -141,6 +200,8 @@ function resetButtonsOnError() {
     stopButton.disabled = true;
     stopButton.classList.add('hidden');
     stopButton.textContent = 'Stop Attack'; // Reset text
+    // Also expand config on error
+    expandConfigArea();
 }
 
 /**
@@ -152,6 +213,8 @@ function resetButtonsOnFinish() {
      stopButton.disabled = true;
      stopButton.classList.add('hidden');
      stopButton.textContent = 'Stop Attack'; // Reset text
+     // Also expand config on finish
+     expandConfigArea();
 }
 
 /**
@@ -182,7 +245,7 @@ function handleResultEvent(event) {
         // Create or update the final result row
         const finalRow = createOrUpdateResultRow(resultData, 'result');
 
-        // --- ADDED: Auto-collapse logic ---
+        // --- Auto-collapse logic ---
         const isComplex = resultData.method?.startsWith('WORKFLOW');
         if (finalRow && isComplex) {
             // Find the toggle elements within the final row
@@ -222,7 +285,7 @@ function handleDoneEvent(event) {
     console.log('Received done event:', event.data);
     showStatus('Simulation complete or stopped.', 'success'); // Updated message
     closeEventSource();
-    resetButtonsOnFinish(); // Reset buttons
+    resetButtonsOnFinish(); // Reset buttons and expand config
 }
 
 /**
@@ -238,7 +301,7 @@ function handleErrorEvent(event) {
          showStatus('Received an unparseable error from the server.', 'error');
      }
      // Also reset buttons if a simulation-level error occurs
-     resetButtonsOnFinish();
+     resetButtonsOnFinish(); // Reset buttons and expand config
 }
 
 /**
@@ -251,7 +314,7 @@ function handleGenericErrorEvent(err) {
          showStatus('Error connecting to results stream. Please try again.', 'error');
     }
     closeEventSource();
-    resetButtonsOnError(); // Reset buttons on connection error
+    resetButtonsOnError(); // Reset buttons and expand config on connection error
 }
 
 /**
@@ -291,66 +354,56 @@ function clearResultsTable() {
 }
 
 /**
- * Creates the initial placeholder row for a complex workflow run.
+ * Creates the initial placeholder row for a complex workflow run if it doesn't exist.
  * @param {number} requestId - The ID of the request.
- * @returns {HTMLElement | null} The created placeholder row element or null.
+ * @returns {HTMLElement | null} The created or found placeholder row element or null.
  */
-function createPlaceholderFinalRow(requestId) {
+function ensurePlaceholderFinalRow(requestId) {
     if (!resultsTableBody) return null;
 
     const finalRowId = `result-${requestId}`;
-    // Check if it already exists
-    if (resultsTableBody.querySelector(`#${finalRowId}`)) {
-        return resultsTableBody.querySelector(`#${finalRowId}`);
-    }
+    let finalRow = resultsTableBody.querySelector(`#${finalRowId}`);
 
-    const row = document.createElement('tr');
-    row.id = finalRowId;
-    row.setAttribute('data-request-id', requestId);
-    row.classList.add('result-row', 'final-row', 'final-workflow-row'); // Add all relevant classes
-    row.setAttribute('data-expanded', 'true'); // Start expanded
+    if (!finalRow) {
+        // Create NEW placeholder final row
+        finalRow = document.createElement('tr');
+        finalRow.id = finalRowId;
+        finalRow.setAttribute('data-request-id', requestId);
+        finalRow.classList.add('result-row', 'final-row', 'final-workflow-row');
+        finalRow.setAttribute('data-expanded', 'true'); // Start expanded
 
-    // Add 6 cells with placeholders
-    const cells = [];
-    for (let i = 0; i < 6; i++) {
-        const cell = document.createElement('td');
-        cell.className = 'px-4 py-2 text-sm text-gray-500'; // Default style
-        cell.textContent = '...'; // Placeholder
-        row.appendChild(cell);
-        cells.push(cell);
-    }
-
-    // Populate first cell with toggle/endpoint
-    const endpointName = currentConfig.endpoint?.split('/').pop() || requestId;
-    cells[0].className = 'px-4 py-2 whitespace-nowrap text-sm text-gray-700 toggle-cell';
-    cells[0].innerHTML = `${endpointName} <span class="chevron"></span>`;
-    cells[0].addEventListener('click', handleToggleClick);
-
-    // Add modal listener to the row (excluding the first cell)
-    row.addEventListener('click', (event) => {
-        if (!cells[0].contains(event.target)) {
-            showDetails(requestId);
+        const cells = [];
+        for (let i = 0; i < 6; i++) {
+            const cell = document.createElement('td');
+            cell.className = 'px-4 py-2 text-sm text-gray-500';
+            cell.textContent = '...';
+            finalRow.appendChild(cell);
+            cells.push(cell);
         }
-    });
 
-    // --- Insertion Logic for Placeholder ---
-    // Find the last row of the *previous* request ID to insert after
-    let insertAfterElement = null;
-    if (requestId > 1) {
-        const prevReqId = requestId - 1;
-        const prevRows = resultsTableBody.querySelectorAll(`tr[data-request-id="${prevReqId}"]`);
-        if (prevRows.length > 0) {
-            insertAfterElement = prevRows[prevRows.length - 1];
+        // Populate first cell with toggle/endpoint
+        const endpointName = currentConfig.endpoint?.split('/').pop() || requestId;
+        cells[0].className = 'px-4 py-2 whitespace-nowrap text-sm text-gray-700 toggle-cell';
+        cells[0].innerHTML = `${endpointName} <span class="chevron"></span>`;
+        cells[0].addEventListener('click', handleToggleClick);
+
+        // Add modal listener
+        finalRow.addEventListener('click', (event) => {
+            if (!cells[0].contains(event.target)) showDetails(requestId);
+        });
+
+        // Insert Placeholder Row in correct position
+        let insertBeforeElement = null;
+        const nextReqId = requestId + 1;
+        insertBeforeElement = resultsTableBody.querySelector(`tr[data-request-id="${nextReqId}"]`);
+
+        if (insertBeforeElement) {
+            resultsTableBody.insertBefore(finalRow, insertBeforeElement);
+        } else {
+            resultsTableBody.appendChild(finalRow); // Append if no next request ID found
         }
     }
-
-    if (insertAfterElement) {
-        insertAfterElement.insertAdjacentElement('afterend', row);
-    } else {
-        resultsTableBody.insertBefore(row, resultsTableBody.firstChild); // Insert at the top
-    }
-
-    return row; // Return the created row
+    return finalRow;
 }
 
 
@@ -369,10 +422,10 @@ function createOrUpdateResultRow(data, type) {
     let finalRow = resultsTableBody.querySelector(`#${finalRowId}`); // Try to find the final/placeholder row
     let rowToModify = null; // Keep track of the row we add/update
 
-    // --- Ensure Final/Placeholder Row Exists First for Complex ---
+    // Ensure the final/placeholder row exists if this is a complex workflow event
     const isComplex = data.method?.startsWith('WORKFLOW') || type === 'step';
     if (isComplex && !finalRow) {
-        finalRow = createPlaceholderFinalRow(requestId);
+        finalRow = ensurePlaceholderFinalRow(requestId);
         if (!finalRow) return null; // Should not happen
     }
 
@@ -384,11 +437,10 @@ function createOrUpdateResultRow(data, type) {
         stepRow.id = `step-${requestId}-${rowCounter}`;
         stepRow.setAttribute('data-request-id', requestId);
         stepRow.classList.add('result-row', 'step-row', `step-row-for-${requestId}`);
-        // Add 6 cells
         const stepCells = [];
         for (let i = 0; i < 6; i++) {
             const cell = document.createElement('td');
-            cell.className = 'px-4 py-2 text-sm'; // Base style
+            cell.className = 'px-4 py-2 text-sm';
             stepRow.appendChild(cell);
             stepCells.push(cell);
         }
@@ -417,14 +469,13 @@ function createOrUpdateResultRow(data, type) {
 
     } else { // type === 'result'
         // --- Update FINAL Row ---
-        if (!finalRow) {
-            // Create row for Simple/Medium bots
+        if (!finalRow) { // Create row for Simple/Medium bots if it doesn't exist
             finalRow = document.createElement('tr');
             finalRow.id = finalRowId;
             finalRow.setAttribute('data-request-id', requestId);
             finalRow.classList.add('result-row', 'final-row');
              for (let i = 0; i < 6; i++) finalRow.appendChild(document.createElement('td'));
-             resultsTableBody.appendChild(finalRow); // Append simple/medium results
+             resultsTableBody.appendChild(finalRow);
              finalRow.addEventListener('click', (event) => { showDetails(requestId); });
         }
 

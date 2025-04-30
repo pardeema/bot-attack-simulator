@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Attack Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css"> <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
+      // Optional: Configure Tailwind
       tailwind.config = {
         theme: {
           extend: {
@@ -22,11 +24,16 @@
 </head>
 <body class="bg-gray-100 font-sans overflow-hidden h-screen flex flex-col">
 
-    <header class="sticky top-0 z-10 bg-gray-100 shadow pb-4">
+    <header id="main-header" class="sticky top-0 z-10 bg-gray-100 shadow pb-4 transition-all duration-300 ease-in-out">
         <div class="container mx-auto px-4 md:px-8 pt-4 md:pt-8 max-w-4xl">
-            <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Bot Attack Simulator</h1>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-800">Bot Attack Simulator</h1>
+                <button id="config-toggle-button" title="Toggle Configuration" class="p-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-900">
+                    <svg class="w-5 h-5 transition-transform duration-300 ease-in-out" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                </button>
+            </div>
 
-            <div class="bg-white p-6 rounded-lg shadow-md">
+            <div id="config-container" class="bg-white p-6 rounded-lg shadow-md overflow-hidden transition-all duration-300 ease-in-out">
                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Configuration</h2>
                 <form id="attack-form" class="space-y-4">
                     <div>
@@ -77,7 +84,7 @@
             <div class="bg-white p-6 rounded-lg shadow-md">
                  <h2 class="text-xl font-semibold text-gray-700 mb-4">Results (Click Row for Details)</h2>
                 <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
-                </div>
+                    </div>
                 <div id="results-list" class="overflow-x-auto">
                      <p class="text-gray-500">Results will appear here after launching an attack.</p>
                      </div>
@@ -109,7 +116,8 @@
                         <p><strong class="font-medium">Status:</strong> <span id="modal-res-status"></span></p>
                         <div><strong class="font-medium">Headers:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-headers"></pre></div>
                         <div><strong class="font-medium">Body Snippet:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-body"></pre></div>
-                         <p id="modal-res-error" class="text-red-600 mt-1 hidden"></p> </div>
+                         <p id="modal-res-error" class="text-red-600 mt-1 hidden"></p>
+                    </div>
                 </div>
             </div>
         </div>

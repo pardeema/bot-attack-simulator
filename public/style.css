@@ -9,17 +9,38 @@ body {
 }
 
 header {
-    position: sticky;
+    position: sticky; /* Make header sticky */
     top: 0;
     z-index: 10; /* Keep header above scrolling content */
     background-color: #f3f4f6; /* bg-gray-100 */
-    /* Add padding/shadow if needed */
-    padding-bottom: 1rem;
+    padding-bottom: 1rem; /* Padding below the config box */
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    flex-shrink: 0; /* Prevent header from shrinking */
+    /* Add transition for smooth height change */
+    transition: padding-bottom 0.3s ease-in-out;
 }
 
+/* Style for the config container when collapsed */
+/* Uses max-height transition for smooth collapse/expand */
+#config-container.collapsed {
+    max-height: 0 !important; /* Use important to override potential inline styles during transition */
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important; /* Collapse margin */
+    border-width: 0 !important;
+    opacity: 0; /* Fade out */
+    overflow: hidden; /* Ensure content is clipped */
+}
+
+/* Style for the toggle button icon when collapsed */
+#config-toggle-button svg.collapsed {
+    transform: rotate(180deg); /* Point down when collapsed */
+}
+
+
 main {
-    flex: 1 1 auto; /* Allow main to grow and shrink */
+    flex: 1 1 auto; /* Allow main to grow and shrink to fill remaining space */
     overflow-y: auto; /* Enable vertical scrolling ONLY for main */
     padding-bottom: 2rem; /* Add some space at the bottom */
 }
