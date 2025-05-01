@@ -10,11 +10,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
-      // Optional: Configure Tailwind
+      // Optional: Configure Tailwind theme defaults
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
+              // Set Inter as the default sans-serif font
               sans: ['Inter', 'sans-serif'],
             },
           }
@@ -45,7 +46,7 @@
                         <select id="endpoint" name="endpoint" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
                             <option value="/api/auth/login">Login (/api/auth/login)</option>
                             <option value="/api/checkout">Checkout (/api/checkout)</option>
-                        </select>
+                            </select>
                     </div>
                     <div>
                         <label for="numRequests" class="block text-sm font-medium text-gray-700">Number of Requests</label>
@@ -59,8 +60,7 @@
                             <option value="Complex">Complex (Browser Emulation)</option>
                         </select>
                     </div>
-                    <div id="cookie-field-container" class="hidden">
-                         <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
+                    <div id="cookie-field-container" class="hidden"> <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
                          <textarea id="cookieString" name="cookieString" rows="3" placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
                          <p class="mt-1 text-xs text-gray-500">Paste the full cookie string here if you want the Medium bot to replay it.</p>
                     </div>
@@ -81,9 +81,15 @@
 
     <main class="flex-1 overflow-y-auto pb-8">
         <div class="container mx-auto px-4 md:px-8 max-w-4xl">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                 <h2 class="text-xl font-semibold text-gray-700 mb-4">Results (Click Row for Details)</h2>
-                <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
+            <div class="bg-white p-6 rounded-lg shadow-md mt-6"> <h2 class="text-xl font-semibold text-gray-700 mb-4">
+                     Results (Click Final Row or Step with
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block text-blue-600 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                     </svg>
+                     for Details)
+                 </h2>
+                 <div id="status-message" class="mb-4 p-3 rounded-md bg-blue-50 text-blue-700 hidden">
                     </div>
                 <div id="results-list" class="overflow-x-auto">
                      <p class="text-gray-500">Results will appear here after launching an attack.</p>
@@ -95,14 +101,13 @@
     <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
        <div class="relative mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900" id="modal-title">Request Details</h3>
-                <button id="modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                <h3 class="text-lg font-medium text-gray-900" id="modal-title">Details</h3> <button id="modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
                 </button>
             </div>
             <div class="mt-3 text-sm space-y-4">
                 <div>
-                    <h4 class="font-semibold text-gray-700 mb-1">Request (Final API Call)</h4>
+                    <h4 id="modal-req-heading" class="font-semibold text-gray-700 mb-1">Request</h4>
                     <div class="bg-gray-50 p-3 rounded border border-gray-200 max-h-60 overflow-y-auto">
                         <p><strong class="font-medium">URL:</strong> <span id="modal-req-url"></span></p>
                         <p><strong class="font-medium">Method:</strong> <span id="modal-req-method"></span></p>
@@ -111,7 +116,7 @@
                     </div>
                 </div>
                 <div>
-                    <h4 class="font-semibold text-gray-700 mb-1">Response (Final API Call)</h4>
+                    <h4 id="modal-res-heading" class="font-semibold text-gray-700 mb-1">Response</h4>
                      <div class="bg-gray-50 p-3 rounded border border-gray-200 max-h-60 overflow-y-auto">
                         <p><strong class="font-medium">Status:</strong> <span id="modal-res-status"></span></p>
                         <div><strong class="font-medium">Headers:</strong> <pre class="whitespace-pre-wrap break-words text-xs" id="modal-res-headers"></pre></div>
