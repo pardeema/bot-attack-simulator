@@ -2,7 +2,12 @@
 const axios = require('axios');
 const crypto = require('crypto');
 
-const USER_AGENTS = [ /* ... */ ]; // Keep your list
+const USER_AGENTS = [ // Shortened list for brevity
+     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15',
+     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0',
+     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1',
+ ];
 const ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
 function generateRandomPassword() { return crypto.randomBytes(8).toString('hex'); }
@@ -53,16 +58,30 @@ async function runMediumBots({ targetUrl, endpoint, numRequests, eventEmitter, c
              }
 
             // Construct Headers
-            const requestHeaders = { /* ... construct headers ... */ };
-            if (cookieString && cookieString.trim() !== '') { requestHeaders['Cookie'] = cookieString.trim(); }
-            // ...
+            const requestHeaders = {
+                'User-Agent': getRandomUserAgent(),
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': ACCEPT_LANGUAGE,
+                'Content-Type': 'application/json',
+                'Origin': targetUrl,
+                'Referer': refererUrl,
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+            };
+            if (cookieString && cookieString.trim() !== '') {
+                requestHeaders['Cookie'] = cookieString.trim();
+            }
 
             let status = null, statusText = '', error = null, responseDataSnippet = null, responseHeaders = null;
 
             try {
                 console.log(`[MediumBot] Sending request ${i}...`);
-                const response = await axios.post(fullUrl, requestBody, { /* axios config */ });
-                // Process response
+                const response = await axios.post(fullUrl, requestBody, {
+                    timeout: 10000,
+                    headers: requestHeaders,
+                    validateStatus: function (status) { return true; }
+                });                // Process response
                  status = response.status; statusText = response.statusText; responseHeaders = response.headers;
                  if (response.data) responseDataSnippet = (typeof response.data === 'object' ? JSON.stringify(response.data) : String(response.data)).substring(0, 100);
                  console.log(`[MediumBot] Request ${i} completed: Status ${status}`);

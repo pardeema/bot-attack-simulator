@@ -69,6 +69,19 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 const context = await browser.newContext();
                 const page = await context.newPage();
 
+                // Network listeners
+                page.on('request', request => {
+                    const url = request.url();
+                    // Check if the URL path starts with /149/
+                    const urlPath = new URL(url).pathname;
+                    if (urlPath.startsWith('/149')) {
+                        // Emit a specific event for this type of request
+                        const filename = urlPath.split('/').pop(); // Get the last part of the path
+                        emitStep(eventEmitter, i, `JS Exec: /149.../${filename}`); // 'i' is the current request ID
+                        console.log(`[ComplexBot] Req ${i}: Detected Protection JS request: ${url}`);
+                    }
+                });
+
                 // === LOGIN WORKFLOW ===
                 if (isLogin) {
                     // ... (login workflow logic as before) ...
