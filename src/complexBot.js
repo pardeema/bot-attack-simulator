@@ -69,6 +69,7 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 const context = await browser.newContext();
                 const page = await context.newPage();
 
+                // Network listeners
                 page.on('request', request => {
                     const url = request.url();
                     // Check if the URL path starts with /149/
