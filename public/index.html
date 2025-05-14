@@ -55,14 +55,22 @@
                     <div>
                         <label for="botType" class="block text-sm font-medium text-gray-700">Bot Type</label>
                         <select id="botType" name="botType" required class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white">
-                            <option value="Simple">Simple (Sequential HTTP)</option>
-                            <option value="Medium">Medium (Realistic Headers)</option>
-                            <option value="Complex">Complex (Browser Emulation)</option>
-                        </select>
+                            <option value="Simple">Simple (HTTP Requests with options)</option>
+                            <option value="Medium">Medium (Browser Emulation)</option>
+                            </select>
                     </div>
-                    <div id="cookie-field-container" class="hidden"> <label for="cookieString" class="block text-sm font-medium text-gray-700">Optional Cookie String (for Medium Bots)</label>
-                         <textarea id="cookieString" name="cookieString" rows="3" placeholder="e.g., sessionid=abc123xyz; user_prefs=darkmode; ..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
-                         <p class="mt-1 text-xs text-gray-500">Paste the full cookie string here if you want the Medium bot to replay it.</p>
+
+                    <div id="simple-bot-options-container" class="space-y-3 p-3 bg-indigo-50 rounded-md border border-indigo-200 hidden">
+                        <h3 class="text-xs font-medium text-indigo-700">Simple Bot Options:</h3>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="useRealUserAgents" name="useRealUserAgents" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                            <label for="useRealUserAgents" class="ml-2 block text-sm text-gray-700">Enable Real User Agents</for>
+                        </div>
+                        <div>
+                            <label for="simpleBotCookies" class="block text-sm font-medium text-gray-700">Cookies (for Simple Bot)</label>
+                            <textarea id="simpleBotCookies" name="simpleBotCookies" rows="2" placeholder="e.g., key1=value1; key2=value2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                            <p class="mt-1 text-xs text-gray-500">Optional: Provide cookies for the Simple bot requests.</p>
+                        </div>
                     </div>
                     <div class="flex space-x-4">
                          <button type="submit" id="launch-button"
@@ -81,7 +89,8 @@
 
     <main class="flex-1 overflow-y-auto pb-8">
         <div class="container mx-auto px-4 md:px-8 max-w-4xl">
-            <div class="bg-white p-6 rounded-lg shadow-md mt-6"> <h2 class="text-xl font-semibold text-gray-700 mb-4">
+            <div class="bg-white p-6 rounded-lg shadow-md mt-6">
+                 <h2 class="text-xl font-semibold text-gray-700 mb-4">
                      Results (Click Final Row or Step with
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block text-blue-600 mx-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -101,7 +110,8 @@
     <div id="detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
        <div class="relative mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b border-gray-200">
-                <h3 class="text-lg font-medium text-gray-900" id="modal-title">Details</h3> <button id="modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                <h3 class="text-lg font-medium text-gray-900" id="modal-title">Details</h3>
+                <button id="modal-close-button" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
                 </button>
             </div>

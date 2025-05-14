@@ -1,3 +1,12 @@
+# Docker
+.dockerignore
+
+# GitHub specific files
+.github/
+
+# Fly.io config
+fly.toml
+
 # Dependencies
 node_modules/
 
