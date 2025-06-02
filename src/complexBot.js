@@ -220,7 +220,7 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 if (isLogin) {
                      const loginPageUrl = targetUrl + LOGIN_PAGE_URL_SUFFIX;
                      const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
-                     const email = `user${crypto.randomBytes(4).toString('hex')}@example.com`;
+                     const email = "user@example.com";
 
                      emitStep(eventEmitter, i, `Navigating to ${loginPageUrl}...`);
                      await page.goto(loginPageUrl, { waitUntil: 'networkidle', timeout: 20000 });
