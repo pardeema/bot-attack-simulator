@@ -259,12 +259,15 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      
                      // Handle potential timeout for CAPTCHA login
                      let apiResponse, apiRequest;
+                     let captchaTimeout = false;
+                     
                      try {
                          apiResponse = await apiResponsePromise;
                          apiRequest = apiResponse.request();
                      } catch (timeoutError) {
                          if (isCaptchaLogin) {
                              emitStep(eventEmitter, i, `CAPTCHA login timeout - likely blocked by CAPTCHA verification`);
+                             captchaTimeout = true;
                              // Create a mock response for CAPTCHA timeout scenario
                              finalApiRequestDetails = { url: apiEndpointPath, method: 'POST', requestHeaders: {}, requestBody: null };
                              finalApiResponseDetails = { 
@@ -276,14 +279,13 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                              };
                              resultData.status = 400;
                              resultData.statusText = 'CAPTCHA Timeout';
-                             continue; // Skip to next iteration
                          } else {
                              throw timeoutError; // Re-throw for non-CAPTCHA timeouts
                          }
                      }
 
-                     // Only process response details if we actually got a response
-                     if (apiResponse && apiRequest) {
+                     // Only process response details if we actually got a response and didn't timeout
+                     if (!captchaTimeout && apiResponse && apiRequest) {
                          finalApiRequestDetails = await getRequestDetails(apiRequest);
                          finalApiResponseDetails = await getResponseDetails(apiResponse);
 
@@ -293,7 +295,7 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
 
                          resultData.status = finalApiResponseDetails.responseStatus;
                          resultData.statusText = finalApiResponseDetails.responseStatusText;
-                     } else {
+                     } else if (captchaTimeout) {
                          // For CAPTCHA timeout, we already set the result data above
                          emitStep(eventEmitter, i, `CAPTCHA login blocked - no API response received`);
                      }
