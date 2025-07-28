@@ -115,10 +115,11 @@ function toggleSimpleBotOptions() {
 function handleEndpointChange() {
     const selectedEndpoint = endpointSelect.value;
     const isCaptchaLogin = selectedEndpoint.includes('captcha-login');
+    const currentBotType = botTypeSelect.value;
     
     if (isCaptchaLogin) {
         // For CAPTCHA Login, allow Simple Bot and CAPTCHA Bot
-        if (botTypeSelect.value === 'Medium') {
+        if (currentBotType === 'Medium') {
             botTypeSelect.value = 'Simple'; // Default to Simple if Medium was selected
         }
         botTypeSelect.disabled = false;
@@ -136,7 +137,10 @@ function handleEndpointChange() {
         // Show a status message
         showStatus('CAPTCHA Login selected - Choose Simple Bot for direct API testing or CAPTCHA Solver for advanced automation', 'info');
     } else {
-        // For other endpoints, allow all bot types
+        // For other endpoints, allow Simple and Medium bots only (not CAPTCHA bot)
+        if (currentBotType === 'CAPTCHA') {
+            botTypeSelect.value = 'Simple'; // Switch to Simple if CAPTCHA was selected
+        }
         botTypeSelect.disabled = false;
         botTypeSelect.title = '';
         

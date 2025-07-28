@@ -187,15 +187,13 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
         const isCaptchaLogin = endpoint.includes('captcha-login');
 
         if (!isCaptchaLogin) {
-            console.warn(`[CaptchaBot] Endpoint "${endpoint}" is not a CAPTCHA login endpoint.`);
-            eventEmitter.emit('error', { message: `CaptchaBot is designed for CAPTCHA login endpoints only.` });
-            eventEmitter.emit('done');
-            return resolve();
+            console.warn(`[CaptchaBot] Endpoint "${endpoint}" is not a CAPTCHA login endpoint. Falling back to regular login workflow.`);
+            emitStep(eventEmitter, 1, `CAPTCHA bot used for non-CAPTCHA endpoint "${endpoint}". Falling back to regular login workflow.`);
         }
 
         const knownPassword = "K4sad@!";
         const knownPasswordRequestIndex = Math.floor(Math.random() * numRequests) + 1;
-        console.log(`[CaptchaBot] Starting ${numRequests} CAPTCHA-solving workflows...`);
+        console.log(`[CaptchaBot] Starting ${numRequests} ${isCaptchaLogin ? 'CAPTCHA-solving' : 'login'} workflows...`);
         console.log(`[CaptchaBot] Request #${knownPasswordRequestIndex} will use the known password.`);
 
         for (let i = 1; i <= numRequests; i++) {
@@ -212,7 +210,7 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
             let resultData = {
                 id: i, 
                 url: targetUrl + endpoint, 
-                method: 'WORKFLOW (CAPTCHA Login)',
+                method: `WORKFLOW (${isCaptchaLogin ? 'CAPTCHA Login' : 'Login'})`,
                 status: null, 
                 statusText: '', 
                 timestamp: startTime,
@@ -269,8 +267,10 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                     }
                 });
 
-                // Navigate to CAPTCHA login page
-                const loginPageUrl = targetUrl + CAPTCHA_LOGIN_PAGE_URL_SUFFIX;
+                // Navigate to login page
+                const loginPageUrl = targetUrl + (isCaptchaLogin ? CAPTCHA_LOGIN_PAGE_URL_SUFFIX : '/login');
+                const apiEndpointPath = isCaptchaLogin ? CAPTCHA_LOGIN_API_ENDPOINT_PATH : '/api/auth/login';
+                
                 emitStep(eventEmitter, i, `Navigating to ${loginPageUrl}...`);
                 await page.goto(loginPageUrl, { 
                     waitUntil: 'domcontentloaded', 
@@ -290,44 +290,51 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 await page.locator(USERNAME_SELECTOR).fill(email);
                 await page.locator(PASSWORD_SELECTOR).fill(password);
 
-                // Attempt to solve CAPTCHA
-                await attemptCaptchaSolve(page, eventEmitter, i);
+                // Attempt to solve CAPTCHA only for CAPTCHA login
+                if (isCaptchaLogin) {
+                    await attemptCaptchaSolve(page, eventEmitter, i);
+                } else {
+                    emitStep(eventEmitter, i, 'Skipping CAPTCHA solving for regular login endpoint');
+                }
 
                 // Set up API response monitoring
                 const apiResponsePromise = page.waitForResponse(
-                    resp => resp.url().includes(CAPTCHA_LOGIN_API_ENDPOINT_PATH) && resp.request().method() === 'POST',
+                    resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
                     { timeout: 20000 }
                 );
 
                 // Submit the form
-                emitStep(eventEmitter, i, 'Submitting form with CAPTCHA solution...');
+                emitStep(eventEmitter, i, `Submitting form${isCaptchaLogin ? ' with CAPTCHA solution' : ''}...`);
                 await page.locator(SUBMIT_BUTTON_SELECTOR).click();
 
-                emitStep(eventEmitter, i, `Waiting for API response (${CAPTCHA_LOGIN_API_ENDPOINT_PATH})...`);
+                emitStep(eventEmitter, i, `Waiting for API response (${apiEndpointPath})...`);
                 
                 let apiResponse, apiRequest;
                 try {
                     apiResponse = await apiResponsePromise;
                     apiRequest = apiResponse.request();
                 } catch (timeoutError) {
-                    emitStep(eventEmitter, i, `CAPTCHA login timeout - CAPTCHA solving may have failed`);
-                    finalApiRequestDetails = { url: CAPTCHA_LOGIN_API_ENDPOINT_PATH, method: 'POST', requestHeaders: {}, requestBody: null };
+                    const timeoutMessage = isCaptchaLogin ? 
+                        'CAPTCHA login timeout - CAPTCHA solving may have failed' : 
+                        'Login timeout - request may have been blocked';
+                    emitStep(eventEmitter, i, timeoutMessage);
+                    finalApiRequestDetails = { url: apiEndpointPath, method: 'POST', requestHeaders: {}, requestBody: null };
                     finalApiResponseDetails = { 
                         responseStatus: 400, 
-                        responseStatusText: 'CAPTCHA Timeout', 
+                        responseStatusText: 'Login Timeout', 
                         responseHeaders: {}, 
-                        responseBodySnippet: '{"message":"CAPTCHA solving failed - timeout waiting for response"}',
-                        error: 'API response timeout - CAPTCHA solving may have been unsuccessful'
+                        responseBodySnippet: `{"message":"${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} failed - timeout waiting for response"}`,
+                        error: `API response timeout - ${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} may have been unsuccessful`
                     };
                     resultData.status = 400;
-                    resultData.statusText = 'CAPTCHA Timeout';
+                    resultData.statusText = 'Login Timeout';
                 }
 
                 if (apiResponse && apiRequest) {
                     finalApiRequestDetails = await getRequestDetails(apiRequest);
                     finalApiResponseDetails = await getResponseDetails(apiResponse);
 
-                    emitStep(eventEmitter, i, `API Call: ${CAPTCHA_LOGIN_API_ENDPOINT_PATH}`, {
+                    emitStep(eventEmitter, i, `API Call: ${apiEndpointPath}`, {
                         ...finalApiRequestDetails, ...finalApiResponseDetails
                     });
 
@@ -335,7 +342,7 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                     resultData.statusText = finalApiResponseDetails.responseStatusText;
                 }
 
-                emitStep(eventEmitter, i, `CAPTCHA solving workflow completed. Final API Status: ${resultData.status}`);
+                emitStep(eventEmitter, i, `${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} workflow completed. Final API Status: ${resultData.status}`);
 
             } catch (err) {
                 console.error(`[CaptchaBot] Req ${i}: Workflow failed - ${err.message.split('\n')[0]}`);
