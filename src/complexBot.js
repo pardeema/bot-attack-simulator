@@ -5,10 +5,12 @@ const crypto = require('crypto');
 // --- Selectors ---
 // Ensure these selectors match your target application
 const LOGIN_PAGE_URL_SUFFIX = '/login';
+const CAPTCHA_LOGIN_PAGE_URL_SUFFIX = '/captcha-login';
 const USERNAME_SELECTOR = '#email';
 const PASSWORD_SELECTOR = '#password';
 const SUBMIT_BUTTON_SELECTOR = 'button[type="submit"]';
 const LOGIN_API_ENDPOINT_PATH = '/api/auth/login'; // Example API path
+const CAPTCHA_LOGIN_API_ENDPOINT_PATH = '/api/auth/captcha-login'; // CAPTCHA login API path
 const ADD_TO_CART_SELECTOR = '.add-to-cart-btn'; // Example selector
 const VIEW_CART_SELECTOR = 'a[href="/cart"]'; // Example selector
 const PROCEED_TO_CHECKOUT_SELECTOR = 'button:has-text("Proceed to Checkout")'; // Example selector
@@ -218,7 +220,9 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 });
 
                 if (isLogin) {
-                     const loginPageUrl = targetUrl + LOGIN_PAGE_URL_SUFFIX;
+                     const isCaptchaLogin = endpoint.includes('captcha-login');
+                     const loginPageUrl = targetUrl + (isCaptchaLogin ? CAPTCHA_LOGIN_PAGE_URL_SUFFIX : LOGIN_PAGE_URL_SUFFIX);
+                     const apiEndpointPath = isCaptchaLogin ? CAPTCHA_LOGIN_API_ENDPOINT_PATH : LOGIN_API_ENDPOINT_PATH;
                      const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
                      const email = "user@example.com";
 
@@ -230,21 +234,21 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      await page.locator(PASSWORD_SELECTOR).fill(password);
 
                      const apiResponsePromise = page.waitForResponse(
-                             resp => resp.url().includes(LOGIN_API_ENDPOINT_PATH) && resp.request().method() === 'POST',
+                             resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
                              { timeout: 15000 }
                          );
 
                      emitStep(eventEmitter, i, 'Clicking submit...');
                      await page.locator(SUBMIT_BUTTON_SELECTOR).click();
 
-                     emitStep(eventEmitter, i, `Waiting for API response (${LOGIN_API_ENDPOINT_PATH})...`);
+                     emitStep(eventEmitter, i, `Waiting for API response (${apiEndpointPath})...`);
                      const apiResponse = await apiResponsePromise;
                      const apiRequest = apiResponse.request();
 
                      finalApiRequestDetails = await getRequestDetails(apiRequest);
                      finalApiResponseDetails = await getResponseDetails(apiResponse);
 
-                     emitStep(eventEmitter, i, `API Call: ${LOGIN_API_ENDPOINT_PATH}`, {
+                     emitStep(eventEmitter, i, `API Call: ${apiEndpointPath}`, {
                          ...finalApiRequestDetails, ...finalApiResponseDetails
                      });
 

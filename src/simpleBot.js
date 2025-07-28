@@ -51,7 +51,7 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
         const isLogin = endpoint.includes('login');
         // Determine if/when to use the known password during login attempts
         const knownPasswordRequestIndex = isLogin ? (Math.floor(Math.random() * numRequests) + 1) : -1;
-        const refererUrl = targetUrl + (isLogin ? '/login' : '/cart'); // Common referer
+        const refererUrl = targetUrl + (isLogin ? (endpoint.includes('captcha-login') ? '/captcha-login' : '/login') : '/cart'); // Common referer
 
         console.log(`[SimpleBot] Starting ${numRequests} SEQUENTIAL requests to ${fullUrl}`);
         if (isLogin) console.log(`[SimpleBot] Request #${knownPasswordRequestIndex} will use the known password.`);
@@ -72,7 +72,7 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
             let passwordUsed = null; // Store the actual password used for the request
 
             // Determine request body based on endpoint
-             if (isLogin) {
+             if (isLogin || endpoint.includes('captcha-login')) {
                  passwordUsed = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
                  requestBody = { email: "user@example.com", password: passwordUsed };
              } else if (endpoint.includes('checkout')) {
