@@ -164,9 +164,26 @@ async function handleFormSubmit(event) {
          targetUrl: 'https://shop.botdemo.net', // Always locked to this URL
          endpoint: formData.get('endpoint'),
          numRequests: parseInt(formData.get('numRequests'), 10),
-         botType: formData.get('botType'),
+         botType: formData.get('botType') || botTypeSelect.value, // Fallback to current select value if form data is empty
          // cookieString: formData.get('cookieString') || '' // This was for old Medium bot
      };
+
+     // Debug logging
+     console.log('Form submission debug:', {
+         endpoint: currentConfig.endpoint,
+         botType: currentConfig.botType,
+         botTypeSelectValue: botTypeSelect.value,
+         botTypeSelectDisabled: botTypeSelect.disabled
+     });
+
+     // Validate required parameters
+     if (!currentConfig.endpoint || !currentConfig.botType || !currentConfig.numRequests) {
+         const errorMsg = `Missing required parameters: endpoint=${currentConfig.endpoint}, botType=${currentConfig.botType}, numRequests=${currentConfig.numRequests}`;
+         console.error('Validation error:', errorMsg);
+         showStatus(`Error: ${errorMsg}`, 'error');
+         resetButtonsOnError();
+         return;
+     }
 
      // Add Simple Bot specific options if that type is selected
      if (currentConfig.botType === 'Simple') {
