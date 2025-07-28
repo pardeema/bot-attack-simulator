@@ -256,18 +256,47 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      await page.locator(SUBMIT_BUTTON_SELECTOR).click();
 
                      emitStep(eventEmitter, i, `Waiting for API response (${apiEndpointPath})...`);
-                     const apiResponse = await apiResponsePromise;
-                     const apiRequest = apiResponse.request();
+                     
+                     // Handle potential timeout for CAPTCHA login
+                     let apiResponse, apiRequest;
+                     try {
+                         apiResponse = await apiResponsePromise;
+                         apiRequest = apiResponse.request();
+                     } catch (timeoutError) {
+                         if (isCaptchaLogin) {
+                             emitStep(eventEmitter, i, `CAPTCHA login timeout - likely blocked by CAPTCHA verification`);
+                             // Create a mock response for CAPTCHA timeout scenario
+                             finalApiRequestDetails = { url: apiEndpointPath, method: 'POST', requestHeaders: {}, requestBody: null };
+                             finalApiResponseDetails = { 
+                                 responseStatus: 400, 
+                                 responseStatusText: 'CAPTCHA Timeout', 
+                                 responseHeaders: {}, 
+                                 responseBodySnippet: '{"message":"CAPTCHA verification timeout - likely blocked by bot detection"}',
+                                 error: 'API response timeout - CAPTCHA verification likely blocked the request'
+                             };
+                             resultData.status = 400;
+                             resultData.statusText = 'CAPTCHA Timeout';
+                             continue; // Skip to next iteration
+                         } else {
+                             throw timeoutError; // Re-throw for non-CAPTCHA timeouts
+                         }
+                     }
 
-                     finalApiRequestDetails = await getRequestDetails(apiRequest);
-                     finalApiResponseDetails = await getResponseDetails(apiResponse);
+                     // Only process response details if we actually got a response
+                     if (apiResponse && apiRequest) {
+                         finalApiRequestDetails = await getRequestDetails(apiRequest);
+                         finalApiResponseDetails = await getResponseDetails(apiResponse);
 
-                     emitStep(eventEmitter, i, `API Call: ${apiEndpointPath}`, {
-                         ...finalApiRequestDetails, ...finalApiResponseDetails
-                     });
+                         emitStep(eventEmitter, i, `API Call: ${apiEndpointPath}`, {
+                             ...finalApiRequestDetails, ...finalApiResponseDetails
+                         });
 
-                     resultData.status = finalApiResponseDetails.responseStatus;
-                     resultData.statusText = finalApiResponseDetails.responseStatusText;
+                         resultData.status = finalApiResponseDetails.responseStatus;
+                         resultData.statusText = finalApiResponseDetails.responseStatusText;
+                     } else {
+                         // For CAPTCHA timeout, we already set the result data above
+                         emitStep(eventEmitter, i, `CAPTCHA login blocked - no API response received`);
+                     }
                 } else if (isCheckout) {
                      emitStep(eventEmitter, i, `Navigating to Home: ${targetUrl}...`);
                      await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 20000 });
@@ -334,11 +363,11 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 }
             }
 
-            resultData.requestHeaders = finalApiRequestDetails.requestHeaders;
-            resultData.responseHeaders = finalApiResponseDetails.responseHeaders;
-            resultData.responseDataSnippet = finalApiResponseDetails.responseBodySnippet;
+            resultData.requestHeaders = finalApiRequestDetails?.requestHeaders || {};
+            resultData.responseHeaders = finalApiResponseDetails?.responseHeaders || {};
+            resultData.responseDataSnippet = finalApiResponseDetails?.responseBodySnippet || '';
 
-            let displayRequestBody = finalApiRequestDetails.requestBody;
+            let displayRequestBody = finalApiRequestDetails?.requestBody || null;
             if (isLogin && i === knownPasswordRequestIndex && displayRequestBody && typeof displayRequestBody === 'object') {
                 console.log(`[ComplexBot] Req ${i}: Obfuscating known password for final result event.`);
                 try {
