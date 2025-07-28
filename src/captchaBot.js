@@ -135,6 +135,8 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
                     }
                 }
             }
+        } else {
+            emitStep(eventEmitter, requestId, 'No CAPTCHA iframe found');
         }
 
         // Method 2: Look for any CAPTCHA-related elements on the page
@@ -144,6 +146,9 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
             
             for (let i = 0; i < captchaElements.length; i++) {
                 try {
+                    const elementText = await captchaElements[i].textContent() || '';
+                    const elementClass = await captchaElements[i].getAttribute('class') || '';
+                    emitStep(eventEmitter, requestId, `Clicking CAPTCHA element ${i + 1} (text: "${elementText}", class: "${elementClass}")`);
                     await captchaElements[i].click();
                     emitStep(eventEmitter, requestId, `Clicked CAPTCHA element ${i + 1}`);
                     await page.waitForTimeout(1000);
@@ -151,6 +156,8 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
                     console.warn(`[CaptchaBot] Could not click CAPTCHA element ${i + 1}: ${e.message}`);
                 }
             }
+        } else {
+            emitStep(eventEmitter, requestId, 'No CAPTCHA-related elements found');
         }
 
         // Method 3: Try to find and interact with any interactive elements that might be CAPTCHA
@@ -184,6 +191,8 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
         const successIndicators = await page.locator('[class*="success"], [class*="verified"], [class*="complete"], [data-success="true"]').all();
         if (successIndicators.length > 0) {
             emitStep(eventEmitter, requestId, `Found ${successIndicators.length} CAPTCHA success indicators`);
+        } else {
+            emitStep(eventEmitter, requestId, 'No CAPTCHA success indicators found');
         }
 
         // Method 6: Try to find and interact with any remaining CAPTCHA elements
@@ -260,6 +269,78 @@ async function waitForCaptchaCompletion(page, eventEmitter, requestId) {
     } catch (error) {
         emitStep(eventEmitter, requestId, `Error waiting for CAPTCHA completion: ${error.message}`);
         return false;
+    }
+}
+
+/**
+ * Analyzes the page to find CAPTCHA elements and their structure.
+ */
+async function analyzeCaptchaStructure(page, eventEmitter, requestId) {
+    emitStep(eventEmitter, requestId, 'Analyzing CAPTCHA structure...');
+    
+    try {
+        // Get all iframes on the page
+        const allIframes = await page.locator('iframe').all();
+        emitStep(eventEmitter, requestId, `Found ${allIframes.length} iframes on page`);
+        
+        for (let i = 0; i < allIframes.length; i++) {
+            try {
+                const iframe = allIframes[i];
+                const src = await iframe.getAttribute('src') || '';
+                const id = await iframe.getAttribute('id') || '';
+                const className = await iframe.getAttribute('class') || '';
+                
+                emitStep(eventEmitter, requestId, `Iframe ${i + 1}: src="${src}", id="${id}", class="${className}"`);
+                
+                if (src.includes('turnstile') || src.includes('captcha') || className.includes('turnstile') || id.includes('turnstile')) {
+                    emitStep(eventEmitter, requestId, `Found CAPTCHA iframe: ${src}`);
+                    
+                    // Try to interact with this iframe
+                    const frame = await iframe.elementHandle();
+                    if (frame) {
+                        const iframeContent = await frame.contentFrame();
+                        if (iframeContent) {
+                            // Look for clickable elements in the iframe
+                            const iframeElements = await iframeContent.locator('button, input, [role="button"], .clickable').all();
+                            emitStep(eventEmitter, requestId, `Found ${iframeElements.length} interactive elements in CAPTCHA iframe`);
+                            
+                            for (let j = 0; j < iframeElements.length; j++) {
+                                try {
+                                    const elementText = await iframeElements[j].textContent() || '';
+                                    const elementTag = await iframeElements[j].evaluate(el => el.tagName.toLowerCase());
+                                    emitStep(eventEmitter, requestId, `Clicking iframe element ${j + 1} (${elementTag}: "${elementText}")`);
+                                    await iframeElements[j].click();
+                                    await page.waitForTimeout(1000);
+                                } catch (e) {
+                                    // Ignore individual element errors
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                emitStep(eventEmitter, requestId, `Error analyzing iframe ${i + 1}: ${e.message}`);
+            }
+        }
+        
+        // Also look for any elements with CAPTCHA-related attributes
+        const captchaElements = await page.locator('[data-sitekey], [data-captcha], [data-turnstile]').all();
+        emitStep(eventEmitter, requestId, `Found ${captchaElements.length} elements with CAPTCHA data attributes`);
+        
+        for (let element of captchaElements) {
+            try {
+                const sitekey = await element.getAttribute('data-sitekey') || '';
+                const captchaType = await element.getAttribute('data-captcha') || '';
+                emitStep(eventEmitter, requestId, `CAPTCHA element: sitekey="${sitekey}", type="${captchaType}"`);
+                await element.click();
+                await page.waitForTimeout(1000);
+            } catch (e) {
+                // Ignore errors
+            }
+        }
+        
+    } catch (error) {
+        emitStep(eventEmitter, requestId, `Error analyzing CAPTCHA structure: ${error.message}`);
     }
 }
 
@@ -376,6 +457,10 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
 
                 // Attempt to solve CAPTCHA only for CAPTCHA login
                 if (isCaptchaLogin) {
+                    // First analyze the CAPTCHA structure
+                    await analyzeCaptchaStructure(page, eventEmitter, i);
+                    
+                    // Then attempt traditional CAPTCHA solving
                     await attemptCaptchaSolve(page, eventEmitter, i);
                     
                     // Wait for CAPTCHA completion
@@ -405,7 +490,14 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                         'CAPTCHA login timeout - CAPTCHA solving may have failed' : 
                         'Login timeout - request may have been blocked';
                     emitStep(eventEmitter, i, timeoutMessage);
-                    finalApiRequestDetails = { url: apiEndpointPath, method: 'POST', requestHeaders: {}, requestBody: null };
+                    
+                    // Create mock response details for timeout
+                    finalApiRequestDetails = { 
+                        url: apiEndpointPath, 
+                        method: 'POST', 
+                        requestHeaders: {}, 
+                        requestBody: null 
+                    };
                     finalApiResponseDetails = { 
                         responseStatus: 400, 
                         responseStatusText: 'Login Timeout', 
@@ -415,6 +507,9 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                     };
                     resultData.status = 400;
                     resultData.statusText = 'Login Timeout';
+                    
+                    // Don't throw the error, just continue with the mock data
+                    console.warn(`[CaptchaBot] Req ${i}: API timeout handled gracefully`);
                 }
 
                 if (apiResponse && apiRequest) {
