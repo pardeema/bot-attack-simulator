@@ -122,6 +122,16 @@ function handleEndpointChange() {
         botTypeSelect.disabled = true;
         botTypeSelect.title = 'CAPTCHA Login only supports Simple Bot';
         
+        // Add a hidden input to ensure the bot type is included in form data
+        let hiddenBotTypeInput = form.querySelector('input[name="botType"]');
+        if (!hiddenBotTypeInput) {
+            hiddenBotTypeInput = document.createElement('input');
+            hiddenBotTypeInput.type = 'hidden';
+            hiddenBotTypeInput.name = 'botType';
+            form.appendChild(hiddenBotTypeInput);
+        }
+        hiddenBotTypeInput.value = 'Simple';
+        
         // Show Simple Bot options
         toggleSimpleBotOptions();
         
@@ -131,6 +141,12 @@ function handleEndpointChange() {
         // For other endpoints, allow both bot types
         botTypeSelect.disabled = false;
         botTypeSelect.title = '';
+        
+        // Remove the hidden input if it exists
+        const hiddenBotTypeInput = form.querySelector('input[name="botType"]');
+        if (hiddenBotTypeInput) {
+            hiddenBotTypeInput.remove();
+        }
         
         // Hide status message if it was about CAPTCHA
         hideStatus();
