@@ -75,6 +75,11 @@ async function runSimpleBots({ targetUrl, endpoint, numRequests, eventEmitter, s
              if (isLogin || endpoint.includes('captcha-login')) {
                  passwordUsed = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
                  requestBody = { email: "user@example.com", password: passwordUsed };
+                 
+                 // Add dummy CAPTCHA token for CAPTCHA login requests
+                 if (endpoint.includes('captcha-login')) {
+                     requestBody.captchaToken = "dummy_captcha_token_for_testing";
+                 }
              } else if (endpoint.includes('checkout')) {
                  // Example static checkout payload
                  requestBody = {
