@@ -121,12 +121,24 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
                         await checkbox.click();
                         await page.waitForTimeout(2000); // Wait for CAPTCHA to process
                     }
+                    
+                    // Also try to find and click any clickable elements in the iframe
+                    const clickableElements = await iframe.locator('button, [role="button"], .clickable, [class*="turnstile"]').all();
+                    for (let element of clickableElements) {
+                        try {
+                            await element.click();
+                            emitStep(eventEmitter, requestId, 'Clicked element in CAPTCHA iframe');
+                            await page.waitForTimeout(1000);
+                        } catch (e) {
+                            // Ignore individual element errors
+                        }
+                    }
                 }
             }
         }
 
         // Method 2: Look for any CAPTCHA-related elements on the page
-        const captchaElements = await page.locator('[class*="captcha"], [class*="turnstile"], [id*="captcha"], [id*="turnstile"]').all();
+        const captchaElements = await page.locator('[class*="captcha"], [class*="turnstile"], [id*="captcha"], [id*="turnstile"], [data-sitekey]').all();
         if (captchaElements.length > 0) {
             emitStep(eventEmitter, requestId, `Found ${captchaElements.length} CAPTCHA-related elements, attempting interaction...`);
             
@@ -164,18 +176,90 @@ async function attemptCaptchaSolve(page, eventEmitter, requestId) {
             }
         }
 
+        // Method 4: Wait for CAPTCHA completion indicators
+        emitStep(eventEmitter, requestId, 'Waiting for CAPTCHA completion...');
+        await page.waitForTimeout(3000); // Wait for any CAPTCHA processing
+
+        // Method 5: Check for CAPTCHA success indicators
+        const successIndicators = await page.locator('[class*="success"], [class*="verified"], [class*="complete"], [data-success="true"]').all();
+        if (successIndicators.length > 0) {
+            emitStep(eventEmitter, requestId, `Found ${successIndicators.length} CAPTCHA success indicators`);
+        }
+
+        // Method 6: Try to find and interact with any remaining CAPTCHA elements
+        const remainingCaptchaElements = await page.locator('[class*="turnstile"], [id*="turnstile"], iframe[src*="turnstile"]').all();
+        if (remainingCaptchaElements.length > 0) {
+            emitStep(eventEmitter, requestId, `Attempting interaction with ${remainingCaptchaElements.length} remaining CAPTCHA elements...`);
+            for (let element of remainingCaptchaElements) {
+                try {
+                    await element.click();
+                    await page.waitForTimeout(500);
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+        }
+
         if (captchaInteractions > 0) {
             emitStep(eventEmitter, requestId, `Completed ${captchaInteractions} CAPTCHA interactions`);
         } else {
             emitStep(eventEmitter, requestId, 'No specific CAPTCHA elements found, proceeding with form submission');
         }
 
-        // Wait a bit for any CAPTCHA processing
-        await page.waitForTimeout(3000);
+        // Wait a bit more for any CAPTCHA processing
+        await page.waitForTimeout(2000);
 
     } catch (error) {
         emitStep(eventEmitter, requestId, `CAPTCHA interaction error: ${error.message}`);
         console.warn(`[CaptchaBot] CAPTCHA interaction failed: ${error.message}`);
+    }
+}
+
+/**
+ * Waits for CAPTCHA completion and checks for success indicators.
+ */
+async function waitForCaptchaCompletion(page, eventEmitter, requestId) {
+    emitStep(eventEmitter, requestId, 'Waiting for CAPTCHA completion...');
+    
+    try {
+        // Wait for up to 10 seconds for CAPTCHA completion
+        for (let i = 0; i < 10; i++) {
+            await page.waitForTimeout(1000);
+            
+            // Check for various CAPTCHA completion indicators
+            const successIndicators = await page.locator('[class*="success"], [class*="verified"], [class*="complete"], [data-success="true"], [style*="green"], [style*="success"]').all();
+            if (successIndicators.length > 0) {
+                emitStep(eventEmitter, requestId, `CAPTCHA appears to be completed (found ${successIndicators.length} success indicators)`);
+                return true;
+            }
+            
+            // Check if any CAPTCHA elements have changed state
+            const captchaElements = await page.locator('[class*="turnstile"], [id*="turnstile"]').all();
+            let hasChanges = false;
+            for (let element of captchaElements) {
+                try {
+                    const className = await element.getAttribute('class') || '';
+                    if (className.includes('success') || className.includes('verified') || className.includes('complete')) {
+                        hasChanges = true;
+                        break;
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+            
+            if (hasChanges) {
+                emitStep(eventEmitter, requestId, 'CAPTCHA state has changed, assuming completion');
+                return true;
+            }
+        }
+        
+        emitStep(eventEmitter, requestId, 'CAPTCHA completion timeout, proceeding anyway');
+        return false;
+        
+    } catch (error) {
+        emitStep(eventEmitter, requestId, `Error waiting for CAPTCHA completion: ${error.message}`);
+        return false;
     }
 }
 
@@ -293,6 +377,9 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 // Attempt to solve CAPTCHA only for CAPTCHA login
                 if (isCaptchaLogin) {
                     await attemptCaptchaSolve(page, eventEmitter, i);
+                    
+                    // Wait for CAPTCHA completion
+                    await waitForCaptchaCompletion(page, eventEmitter, i);
                 } else {
                     emitStep(eventEmitter, i, 'Skipping CAPTCHA solving for regular login endpoint');
                 }
@@ -395,4 +482,4 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
     });
 }
 
-module.exports = { runCaptchaBots }; 
+module.exports = { runCaptchaBots };
