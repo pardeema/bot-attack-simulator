@@ -128,7 +128,7 @@ async function handleFormSubmit(event) {
 
      const formData = new FormData(form);
      currentConfig = {
-         targetUrl: formData.get('targetUrl'),
+         targetUrl: 'https://shop.botdemo.net', // Always locked to this URL
          endpoint: formData.get('endpoint'),
          numRequests: parseInt(formData.get('numRequests'), 10),
          botType: formData.get('botType'),
