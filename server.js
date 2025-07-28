@@ -4,8 +4,8 @@ const cors = require('cors');
 const path = require('path');
 const EventEmitter = require('events');
 const { runSimpleBots } = require('./src/simpleBot'); // Updated simpleBot
-// const { runMediumBots } = require('./src/mediumBot'); // This line will be removed
 const { runComplexBots } = require('./src/complexBot'); // This will be our new "Medium"
+const { runCaptchaBots } = require('./src/captchaBot');
 
 const app = express();
 const port = 3000;
@@ -74,6 +74,11 @@ app.post('/launch-attack', (req, res) => {
         botRunnerPromise = runComplexBots({
             ...botConfig,
             cookieString: null // Explicitly not passing UI cookie string here, Playwright handles its own cookies
+        });
+    } else if (botType === 'CAPTCHA') { // New CAPTCHA-solving bot
+        console.log(`[Server] CaptchaBot (CAPTCHA Solver) selected.`);
+        botRunnerPromise = runCaptchaBots({
+            ...botConfig
         });
     }
     // Removed old 'Medium' bot (runMediumBots)

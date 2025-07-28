@@ -117,28 +117,26 @@ function handleEndpointChange() {
     const isCaptchaLogin = selectedEndpoint.includes('captcha-login');
     
     if (isCaptchaLogin) {
-        // For CAPTCHA Login, only allow Simple Bot
-        botTypeSelect.value = 'Simple';
-        botTypeSelect.disabled = true;
-        botTypeSelect.title = 'CAPTCHA Login only supports Simple Bot';
-        
-        // Add a hidden input to ensure the bot type is included in form data
-        let hiddenBotTypeInput = form.querySelector('input[name="botType"]');
-        if (!hiddenBotTypeInput) {
-            hiddenBotTypeInput = document.createElement('input');
-            hiddenBotTypeInput.type = 'hidden';
-            hiddenBotTypeInput.name = 'botType';
-            form.appendChild(hiddenBotTypeInput);
+        // For CAPTCHA Login, allow Simple Bot and CAPTCHA Bot
+        if (botTypeSelect.value === 'Medium') {
+            botTypeSelect.value = 'Simple'; // Default to Simple if Medium was selected
         }
-        hiddenBotTypeInput.value = 'Simple';
+        botTypeSelect.disabled = false;
+        botTypeSelect.title = 'CAPTCHA Login supports Simple Bot and CAPTCHA Solver';
         
-        // Show Simple Bot options
+        // Remove the hidden input if it exists
+        const hiddenBotTypeInput = form.querySelector('input[name="botType"]');
+        if (hiddenBotTypeInput) {
+            hiddenBotTypeInput.remove();
+        }
+        
+        // Show Simple Bot options if Simple is selected
         toggleSimpleBotOptions();
         
         // Show a status message
-        showStatus('CAPTCHA Login selected - Medium Bot disabled (CAPTCHA requires direct API testing)', 'info');
+        showStatus('CAPTCHA Login selected - Choose Simple Bot for direct API testing or CAPTCHA Solver for advanced automation', 'info');
     } else {
-        // For other endpoints, allow both bot types
+        // For other endpoints, allow all bot types
         botTypeSelect.disabled = false;
         botTypeSelect.title = '';
         
