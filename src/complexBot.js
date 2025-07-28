@@ -5,12 +5,10 @@ const crypto = require('crypto');
 // --- Selectors ---
 // Ensure these selectors match your target application
 const LOGIN_PAGE_URL_SUFFIX = '/login';
-const CAPTCHA_LOGIN_PAGE_URL_SUFFIX = '/captcha-login';
 const USERNAME_SELECTOR = '#email';
 const PASSWORD_SELECTOR = '#password';
 const SUBMIT_BUTTON_SELECTOR = 'button[type="submit"]';
 const LOGIN_API_ENDPOINT_PATH = '/api/auth/login'; // Example API path
-const CAPTCHA_LOGIN_API_ENDPOINT_PATH = '/api/auth/captcha-login'; // CAPTCHA login API path
 const ADD_TO_CART_SELECTOR = '.add-to-cart-btn'; // Example selector
 const VIEW_CART_SELECTOR = 'a[href="/cart"]'; // Example selector
 const PROCEED_TO_CHECKOUT_SELECTOR = 'button:has-text("Proceed to Checkout")'; // Example selector
@@ -220,16 +218,14 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                 });
 
                 if (isLogin) {
-                     const isCaptchaLogin = endpoint.includes('captcha-login');
-                     const loginPageUrl = targetUrl + (isCaptchaLogin ? CAPTCHA_LOGIN_PAGE_URL_SUFFIX : LOGIN_PAGE_URL_SUFFIX);
-                     const apiEndpointPath = isCaptchaLogin ? CAPTCHA_LOGIN_API_ENDPOINT_PATH : LOGIN_API_ENDPOINT_PATH;
+                     const loginPageUrl = targetUrl + LOGIN_PAGE_URL_SUFFIX;
                      const password = (i === knownPasswordRequestIndex) ? knownPassword : generateRandomPassword();
                      const email = "user@example.com";
 
                      emitStep(eventEmitter, i, `Navigating to ${loginPageUrl}...`);
                      await page.goto(loginPageUrl, { 
-                         waitUntil: isCaptchaLogin ? 'domcontentloaded' : 'networkidle', 
-                         timeout: isCaptchaLogin ? 30000 : 20000 
+                         waitUntil: 'networkidle', 
+                         timeout: 20000 
                      });
 
                      // Log page info for debugging
@@ -241,64 +237,27 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      await page.locator(USERNAME_SELECTOR).fill(email);
                      await page.locator(PASSWORD_SELECTOR).fill(password);
 
-                     // For CAPTCHA login, add a small delay to let the page settle
-                     if (isCaptchaLogin) {
-                         emitStep(eventEmitter, i, 'Waiting for CAPTCHA page to settle...');
-                         await page.waitForTimeout(2000);
-                     }
-
                      const apiResponsePromise = page.waitForResponse(
-                             resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
+                             resp => resp.url().includes(LOGIN_API_ENDPOINT_PATH) && resp.request().method() === 'POST',
                              { timeout: 15000 }
                          );
 
                      emitStep(eventEmitter, i, 'Clicking submit...');
                      await page.locator(SUBMIT_BUTTON_SELECTOR).click();
 
-                     emitStep(eventEmitter, i, `Waiting for API response (${apiEndpointPath})...`);
-                     
-                     // Handle potential timeout for CAPTCHA login
-                     let apiResponse, apiRequest;
-                     let captchaTimeout = false;
-                     
-                     try {
-                         apiResponse = await apiResponsePromise;
-                         apiRequest = apiResponse.request();
-                     } catch (timeoutError) {
-                         if (isCaptchaLogin) {
-                             emitStep(eventEmitter, i, `CAPTCHA login timeout - likely blocked by CAPTCHA verification`);
-                             captchaTimeout = true;
-                             // Create a mock response for CAPTCHA timeout scenario
-                             finalApiRequestDetails = { url: apiEndpointPath, method: 'POST', requestHeaders: {}, requestBody: null };
-                             finalApiResponseDetails = { 
-                                 responseStatus: 400, 
-                                 responseStatusText: 'CAPTCHA Timeout', 
-                                 responseHeaders: {}, 
-                                 responseBodySnippet: '{"message":"CAPTCHA verification timeout - likely blocked by bot detection"}',
-                                 error: 'API response timeout - CAPTCHA verification likely blocked the request'
-                             };
-                             resultData.status = 400;
-                             resultData.statusText = 'CAPTCHA Timeout';
-                         } else {
-                             throw timeoutError; // Re-throw for non-CAPTCHA timeouts
-                         }
-                     }
+                     emitStep(eventEmitter, i, `Waiting for API response (${LOGIN_API_ENDPOINT_PATH})...`);
+                     const apiResponse = await apiResponsePromise;
+                     const apiRequest = apiResponse.request();
 
-                     // Only process response details if we actually got a response and didn't timeout
-                     if (!captchaTimeout && apiResponse && apiRequest) {
-                         finalApiRequestDetails = await getRequestDetails(apiRequest);
-                         finalApiResponseDetails = await getResponseDetails(apiResponse);
+                     finalApiRequestDetails = await getRequestDetails(apiRequest);
+                     finalApiResponseDetails = await getResponseDetails(apiResponse);
 
-                         emitStep(eventEmitter, i, `API Call: ${apiEndpointPath}`, {
-                             ...finalApiRequestDetails, ...finalApiResponseDetails
-                         });
+                     emitStep(eventEmitter, i, `API Call: ${LOGIN_API_ENDPOINT_PATH}`, {
+                         ...finalApiRequestDetails, ...finalApiResponseDetails
+                     });
 
-                         resultData.status = finalApiResponseDetails.responseStatus;
-                         resultData.statusText = finalApiResponseDetails.responseStatusText;
-                     } else if (captchaTimeout) {
-                         // For CAPTCHA timeout, we already set the result data above
-                         emitStep(eventEmitter, i, `CAPTCHA login blocked - no API response received`);
-                     }
+                     resultData.status = finalApiResponseDetails.responseStatus;
+                     resultData.statusText = finalApiResponseDetails.responseStatusText;
                 } else if (isCheckout) {
                      emitStep(eventEmitter, i, `Navigating to Home: ${targetUrl}...`);
                      await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 20000 });

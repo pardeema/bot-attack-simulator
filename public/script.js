@@ -47,8 +47,13 @@ detailModal.addEventListener('click', (event) => { if (event.target === detailMo
 botTypeSelect.addEventListener('change', toggleSimpleBotOptions); // Updated function name
 configToggleButton.addEventListener('click', handleConfigToggle);
 
+// Add endpoint change listener
+const endpointSelect = document.getElementById('endpoint');
+endpointSelect.addEventListener('change', handleEndpointChange);
+
 // --- Initial Setup ---
 toggleSimpleBotOptions(); // Set initial visibility of Simple Bot options
+handleEndpointChange(); // Handle initial endpoint selection
 
 // --- Functions ---
 
@@ -101,6 +106,34 @@ function toggleSimpleBotOptions() {
     if (!showOptions) {
         useRealUserAgentsCheckbox.checked = false;
         simpleBotCookiesTextarea.value = '';
+    }
+}
+
+/**
+ * Handles endpoint changes and restricts bot type selection for CAPTCHA Login.
+ */
+function handleEndpointChange() {
+    const selectedEndpoint = endpointSelect.value;
+    const isCaptchaLogin = selectedEndpoint.includes('captcha-login');
+    
+    if (isCaptchaLogin) {
+        // For CAPTCHA Login, only allow Simple Bot
+        botTypeSelect.value = 'Simple';
+        botTypeSelect.disabled = true;
+        botTypeSelect.title = 'CAPTCHA Login only supports Simple Bot';
+        
+        // Show Simple Bot options
+        toggleSimpleBotOptions();
+        
+        // Show a status message
+        showStatus('CAPTCHA Login selected - Medium Bot disabled (CAPTCHA requires direct API testing)', 'info');
+    } else {
+        // For other endpoints, allow both bot types
+        botTypeSelect.disabled = false;
+        botTypeSelect.title = '';
+        
+        // Hide status message if it was about CAPTCHA
+        hideStatus();
     }
 }
 
