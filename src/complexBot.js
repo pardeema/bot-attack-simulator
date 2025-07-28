@@ -227,11 +227,25 @@ async function runComplexBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                      const email = "user@example.com";
 
                      emitStep(eventEmitter, i, `Navigating to ${loginPageUrl}...`);
-                     await page.goto(loginPageUrl, { waitUntil: 'networkidle', timeout: 20000 });
+                     await page.goto(loginPageUrl, { 
+                         waitUntil: isCaptchaLogin ? 'domcontentloaded' : 'networkidle', 
+                         timeout: isCaptchaLogin ? 30000 : 20000 
+                     });
+
+                     // Log page info for debugging
+                     const pageTitle = await page.title();
+                     const currentUrl = page.url();
+                     emitStep(eventEmitter, i, `Page loaded: "${pageTitle}" at ${currentUrl}`);
 
                      emitStep(eventEmitter, i, 'Filling login form...');
                      await page.locator(USERNAME_SELECTOR).fill(email);
                      await page.locator(PASSWORD_SELECTOR).fill(password);
+
+                     // For CAPTCHA login, add a small delay to let the page settle
+                     if (isCaptchaLogin) {
+                         emitStep(eventEmitter, i, 'Waiting for CAPTCHA page to settle...');
+                         await page.waitForTimeout(2000);
+                     }
 
                      const apiResponsePromise = page.waitForResponse(
                              resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
