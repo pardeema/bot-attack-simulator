@@ -469,11 +469,19 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                     emitStep(eventEmitter, i, 'Skipping CAPTCHA solving for regular login endpoint');
                 }
 
-                // Set up API response monitoring
-                const apiResponsePromise = page.waitForResponse(
-                    resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
-                    { timeout: 20000 }
-                );
+                // Set up API response monitoring with robust timeout handling
+                let apiResponse, apiRequest;
+                let apiResponsePromise;
+                
+                try {
+                    apiResponsePromise = page.waitForResponse(
+                        resp => resp.url().includes(apiEndpointPath) && resp.request().method() === 'POST',
+                        { timeout: 20000 }
+                    );
+                } catch (setupError) {
+                    console.warn(`[CaptchaBot] Req ${i}: Error setting up response monitoring: ${setupError.message}`);
+                    apiResponsePromise = null;
+                }
 
                 // Submit the form
                 emitStep(eventEmitter, i, `Submitting form${isCaptchaLogin ? ' with CAPTCHA solution' : ''}...`);
@@ -481,17 +489,39 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
 
                 emitStep(eventEmitter, i, `Waiting for API response (${apiEndpointPath})...`);
                 
-                let apiResponse, apiRequest;
-                try {
-                    apiResponse = await apiResponsePromise;
-                    apiRequest = apiResponse.request();
-                } catch (timeoutError) {
-                    const timeoutMessage = isCaptchaLogin ? 
-                        'CAPTCHA login timeout - CAPTCHA solving may have failed' : 
-                        'Login timeout - request may have been blocked';
-                    emitStep(eventEmitter, i, timeoutMessage);
-                    
-                    // Create mock response details for timeout
+                if (apiResponsePromise) {
+                    try {
+                        apiResponse = await apiResponsePromise;
+                        apiRequest = apiResponse.request();
+                    } catch (timeoutError) {
+                        const timeoutMessage = isCaptchaLogin ? 
+                            'CAPTCHA login timeout - CAPTCHA solving may have failed' : 
+                            'Login timeout - request may have been blocked';
+                        emitStep(eventEmitter, i, timeoutMessage);
+                        
+                        // Create mock response details for timeout
+                        finalApiRequestDetails = { 
+                            url: apiEndpointPath, 
+                            method: 'POST', 
+                            requestHeaders: {}, 
+                            requestBody: null 
+                        };
+                        finalApiResponseDetails = { 
+                            responseStatus: 400, 
+                            responseStatusText: 'Login Timeout', 
+                            responseHeaders: {}, 
+                            responseBodySnippet: `{"message":"${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} failed - timeout waiting for response"}`,
+                            error: `API response timeout - ${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} may have been unsuccessful`
+                        };
+                        resultData.status = 400;
+                        resultData.statusText = 'Login Timeout';
+                        
+                        // Don't throw the error, just continue with the mock data
+                        console.warn(`[CaptchaBot] Req ${i}: API timeout handled gracefully`);
+                    }
+                } else {
+                    // If response monitoring failed to set up, create mock timeout response
+                    emitStep(eventEmitter, i, 'Response monitoring not available, assuming timeout');
                     finalApiRequestDetails = { 
                         url: apiEndpointPath, 
                         method: 'POST', 
@@ -500,16 +530,13 @@ async function runCaptchaBots({ targetUrl, endpoint, numRequests, eventEmitter, 
                     };
                     finalApiResponseDetails = { 
                         responseStatus: 400, 
-                        responseStatusText: 'Login Timeout', 
+                        responseStatusText: 'Response Monitoring Failed', 
                         responseHeaders: {}, 
-                        responseBodySnippet: `{"message":"${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} failed - timeout waiting for response"}`,
-                        error: `API response timeout - ${isCaptchaLogin ? 'CAPTCHA solving' : 'Login'} may have been unsuccessful`
+                        responseBodySnippet: `{"message":"Response monitoring setup failed"}`,
+                        error: `Could not set up response monitoring`
                     };
                     resultData.status = 400;
-                    resultData.statusText = 'Login Timeout';
-                    
-                    // Don't throw the error, just continue with the mock data
-                    console.warn(`[CaptchaBot] Req ${i}: API timeout handled gracefully`);
+                    resultData.statusText = 'Response Monitoring Failed';
                 }
 
                 if (apiResponse && apiRequest) {
